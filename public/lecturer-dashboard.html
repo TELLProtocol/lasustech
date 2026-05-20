@@ -874,767 +874,570 @@
   <div class="tm" id="toast-msg"></div>
 </div>
 
+```html
 <script>
 // ═══════════════════════════════════════════════════════════════
-//  DATA MODEL  —  mirrors attendBlockchain.py structures exactly
+// CONFIG
 // ═══════════════════════════════════════════════════════════════
 
-const QR_BASE_URL         = "https://lasustech-eattendance.edu.ng/signed.html";
-const QR_VALIDITY_WINDOW  = 30 * 60;   // seconds, matching Python constant
+// LOCAL
+const API_BASE = "http://127.0.0.1:5000/api";
 
-const LECTURER = { name: "Dr. John Doe", tutor_id: "6A0B3354", avatar: "JD" };
+// PRODUCTION EXAMPLE
+// const API_BASE = "https://your-render-app.onrender.com/api";
 
-// Shared ledger: array of Block.to_dict() objects
-// Each block.data.type is one of: "genesis" | "session_created" | "attendance_signed"
-let CHAIN = [
-  {
-    index: 0, timestamp: ts() - 86400 * 5,
-    data: { type: "genesis", message: "LASUSTECH e-Attendance Ledger" },
-    previous_hash: "0",
-    hash: "0000000000000000000000000000000000000000000000000000000000000000",
-  }
-];
+const QR_BASE_URL = "https://lasustech-eattendance.edu.ng/signed.html";
+const QR_VALIDITY_WINDOW = 30 * 60;
 
-// ContractRegistry: { "CSC511::6A0B3354": { course_id, tutor_id }, ... }
-let REGISTRY = {};
+const LECTURER = {
+    name: "Dr. John Doe",
+    tutor_id: "6A0B3354",
+    avatar: "JD"
+};
 
-// Active QR session state
-let activeQR = null;   // { url, expiresAt, sessionId, courseKey }
+let activeQR = null;
 let countdownTimer = null;
 
-// ── pre-seed demo data ──────────────────────────────────────────
-(function seedDemo() {
-  _deploy("CSC511", "6A0B3354");
-  _deploy("MTH401", "7B1C4421");
-
-  const t1 = ts() - 86400 * 4;
-  _createSession("CSC511", "6A0B3354", "4A4A23Z", t1);
-  _appendSignin("CSC511", "6A0B3354", "4A4A23Z", "LST/20/0042", t1 + 200);
-  _appendSignin("CSC511", "6A0B3354", "4A4A23Z", "LST/20/0088", t1 + 340);
-  _appendSignin("CSC511", "6A0B3354", "4A4A23Z", "LST/20/0101", t1 + 510);
-
-  const t2 = ts() - 86400 * 3;
-  _createSession("MTH401", "7B1C4421", "5B5B34W", t2);
-  _appendSignin("MTH401", "7B1C4421", "5B5B34W", "LST/20/0042", t2 + 150);
-  _appendSignin("MTH401", "7B1C4421", "5B5B34W", "LST/20/0055", t2 + 300);
-
-  const t3 = ts() - 86400 * 2;
-  _createSession("CSC511", "6A0B3354", "6C6C45X", t3);
-  _appendSignin("CSC511", "6A0B3354", "6C6C45X", "LST/20/0042", t3 + 120);
-  _appendSignin("CSC511", "6A0B3354", "6C6C45X", "LST/20/0101", t3 + 250);
-})();
-
 // ═══════════════════════════════════════════════════════════════
-//  LEDGER HELPERS  (pure functions mirroring Python methods)
+// HELPERS
 // ═══════════════════════════════════════════════════════════════
 
-function ts() { return Math.floor(Date.now() / 1000); }
+function ts() {
+    return Math.floor(Date.now() / 1000);
+}
+
 function fmtTs(unix) {
-  return new Date(unix * 1000).toLocaleString('en-NG', {
-    year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'
-  });
-}
-function shortHash(h) { return h.slice(0,10) + '…' + h.slice(-6); }
-function randHash()   { return [...Array(64)].map(()=>'0123456789abcdef'[Math.random()*16|0]).join(''); }
-
-function _appendBlock(data) {
-  const prev = CHAIN[CHAIN.length - 1];
-  const block = {
-    index: CHAIN.length,
-    timestamp: ts(),
-    data,
-    previous_hash: prev.hash,
-    hash: randHash(),
-  };
-  CHAIN.push(block);
-  return block;
+    return new Date(unix * 1000).toLocaleString('en-NG', {
+        year:'numeric',
+        month:'short',
+        day:'numeric',
+        hour:'2-digit',
+        minute:'2-digit'
+    });
 }
 
-/** registry.deploy(course_id, tutor_id) */
-function _deploy(course_id, tutor_id) {
-  const key = `${course_id}::${tutor_id}`;
-  if (REGISTRY[key]) throw new Error(`Contract for ${course_id} / ${tutor_id} already deployed.`);
-  REGISTRY[key] = { course_id, tutor_id };
+function shortHash(h) {
+    if (!h) return "—";
+    return h.slice(0,10) + '…' + h.slice(-6);
 }
 
-/** contract.create_session(attendance_id) */
-function _createSession(course_id, tutor_id, attendance_id, timestamp) {
-  const existing = CHAIN.find(b =>
-    b.data.type === 'session_created' &&
-    b.data.course_id === course_id &&
-    b.data.tutorID   === tutor_id &&
-    b.data.attendanceID === attendance_id
-  );
-  if (existing) return { success: false, error: `Session '${attendance_id}' already exists for ${course_id}.` };
-  const record = {
-    type: 'session_created',
-    tutorID: tutor_id,
-    course_id,
-    attendanceID: attendance_id,
-    created_at: timestamp || ts(),
-  };
-  if (timestamp) {
-    // manual seed — insert without normal append to keep timestamps correct
-    const prev = CHAIN[CHAIN.length - 1];
-    CHAIN.push({ index: CHAIN.length, timestamp: timestamp, data: record, previous_hash: prev.hash, hash: randHash() });
-    return { success: true };
-  }
-  const block = _appendBlock(record);
-  return { success: true, block_index: block.index, session: record };
-}
+async function api(url, options = {}) {
+    const res = await fetch(`${API_BASE}${url}`, {
+        headers: {
+            "Content-Type": "application/json"
+        },
+        ...options
+    });
 
-function _appendSignin(course_id, tutor_id, attendance_id, reg_no, timestamp) {
-  const prev = CHAIN[CHAIN.length - 1];
-  CHAIN.push({
-    index: CHAIN.length,
-    timestamp: timestamp || ts(),
-    data: { type: 'attendance_signed', tutorID: tutor_id, course_id, attendanceID: attendance_id, reg_no, signed_at: timestamp || ts() },
-    previous_hash: prev.hash,
-    hash: randHash(),
-  });
-}
-
-/** contract._my_sessions() — sessions for a specific contract */
-function getSessions(course_id, tutor_id) {
-  return CHAIN.filter(b =>
-    b.data.type         === 'session_created' &&
-    b.data.course_id    === course_id &&
-    b.data.tutorID      === tutor_id
-  ).map(b => ({ ...b.data, block_index: b.index, timestamp: b.timestamp }));
-}
-
-/** contract.get_session_attendance(attendance_id) */
-function getSessionAttendance(course_id, attendance_id) {
-  return CHAIN
-    .filter(b => b.data.type === 'attendance_signed' && b.data.course_id === course_id && b.data.attendanceID === attendance_id)
-    .map(b => ({ ...b.data, block_index: b.index }));
-}
-
-/** contract.get_all_attendance() */
-function getAllAttendance(course_id) {
-  return CHAIN
-    .filter(b => b.data.type === 'attendance_signed' && b.data.course_id === course_id)
-    .map(b => ({ ...b.data, block_index: b.index }));
-}
-
-/** contract.get_student_attendance(reg_no) filtered per contract */
-function getStudentAttendance(course_id, tutor_id, reg_no) {
-  const rn = reg_no.toUpperCase().trim();
-  return CHAIN
-    .filter(b => b.data.type === 'attendance_signed' && b.data.course_id === course_id && b.data.tutorID === tutor_id && b.data.reg_no === rn)
-    .map(b => ({ ...b.data, block_index: b.index }));
-}
-
-/** ledger.get_all_signed() */
-function getAllSigned() {
-  return CHAIN.filter(b => b.data.type === 'attendance_signed').map(b => ({ ...b.data, block_index: b.index }));
-}
-
-/** contract.attendance_summary() */
-function attendanceSummary(course_id, tutor_id) {
-  const records  = getAllAttendance(course_id);
-  const sessions = getSessions(course_id, tutor_id);
-  const counts   = {};
-  records.forEach(r => { counts[r.reg_no] = (counts[r.reg_no] || 0) + 1; });
-  return { course_id, total_sessions: sessions.length, student_counts: counts };
-}
-
-/** ledger.is_chain_valid() */
-function isChainValid() {
-  for (let i = 1; i < CHAIN.length; i++) {
-    if (CHAIN[i].previous_hash !== CHAIN[i-1].hash) return false;
-  }
-  return true;
-}
-
-/** ledger.get_student_full_record(reg_no) */
-function getStudentFullRecord(reg_no) {
-  const rn = reg_no.toUpperCase().trim();
-  return CHAIN.filter(b => b.data.type === 'attendance_signed' && b.data.reg_no === rn).map(b => ({ ...b.data, block_index: b.index }));
+    return await res.json();
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  UI: DEPLOY CONTRACT
+// CONTRACTS
 // ═══════════════════════════════════════════════════════════════
 
-function deployContract() {
-  const course_id = document.getElementById('deploy-course').value.trim().toUpperCase();
-  const tutor_id  = document.getElementById('deploy-tutor').value.trim().toUpperCase();
-  if (!course_id || !tutor_id) { toast('Fill in both course code and tutor ID.', 'error'); return; }
-  try {
-    _deploy(course_id, tutor_id);
-    toast(`Contract deployed: ${course_id} :: ${tutor_id}`, 'success');
-    document.getElementById('deploy-course').value = '';
-    document.getElementById('deploy-tutor').value  = '';
-    refreshAll();
-  } catch(e) {
-    toast(e.message, 'error');
-  }
+async function deployContract() {
+
+    const course_id = document
+        .getElementById('deploy-course')
+        .value
+        .trim()
+        .toUpperCase();
+
+    const tutor_id = document
+        .getElementById('deploy-tutor')
+        .value
+        .trim()
+        .toUpperCase();
+
+    if (!course_id || !tutor_id) {
+        toast('Fill in both course code and tutor ID.', 'error');
+        return;
+    }
+
+    try {
+
+        const data = await api('/deploy', {
+            method: 'POST',
+            body: JSON.stringify({
+                course_id,
+                tutor_id
+            })
+        });
+
+        if (data.error) {
+            toast(data.error, 'error');
+            return;
+        }
+
+        toast(`Contract deployed: ${course_id}`, 'success');
+
+        document.getElementById('deploy-course').value = '';
+        document.getElementById('deploy-tutor').value = '';
+
+        refreshAll();
+
+    } catch(err) {
+        toast(err.message, 'error');
+    }
 }
 
-function renderDeployedList() {
-  const keys = Object.keys(REGISTRY);
-  const el   = document.getElementById('deployed-list');
-  if (!keys.length) {
-    el.innerHTML = `<div class="empty-state" style="padding:20px"><i class="fas fa-file-contract"></i><p>None yet.</p></div>`;
-    return;
-  }
-  el.innerHTML = keys.map(k => {
-    const c = REGISTRY[k];
-    return `<div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px">
-      <div>
-        <span style="font-weight:700;font-size:14px">${c.course_id}</span>
-        <span style="font-size:12px;color:var(--muted);font-family:var(--mono);margin-left:8px">${c.tutor_id}</span>
-      </div>
-      <span class="badge badge-orange">Active</span>
-    </div>`;
-  }).join('');
+async function getContracts() {
+    return await api('/contracts');
+}
+
+async function renderDeployedList() {
+
+    const contracts = await getContracts();
+
+    const el = document.getElementById('deployed-list');
+
+    if (!contracts.length) {
+        el.innerHTML = `
+            <div class="empty-state" style="padding:20px">
+                <i class="fas fa-file-contract"></i>
+                <p>None yet.</p>
+            </div>
+        `;
+        return;
+    }
+
+    el.innerHTML = contracts.map(c => `
+        <div style="
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            background:var(--surface2);
+            border:1px solid var(--border);
+            border-radius:8px;
+            padding:10px 14px">
+
+            <div>
+                <span style="font-weight:700;font-size:14px">
+                    ${c.course_id}
+                </span>
+
+                <span style="
+                    font-size:12px;
+                    color:var(--muted);
+                    font-family:var(--mono);
+                    margin-left:8px">
+                    ${c.tutor_id}
+                </span>
+            </div>
+
+            <span class="badge badge-orange">
+                ${c.sessions} sessions
+            </span>
+        </div>
+    `).join('');
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  UI: CREATE SESSION + QR
+// SESSIONS
 // ═══════════════════════════════════════════════════════════════
 
 function autoSessionId() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  const id    = [...Array(7)].map(() => chars[Math.random() * chars.length | 0]).join('');
-  document.getElementById('session-id-input').value = id;
+
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+
+    const id = [...Array(7)]
+        .map(() => chars[Math.random() * chars.length | 0])
+        .join('');
+
+    document.getElementById('session-id-input').value = id;
 }
 
-function createSession() {
-  const key = document.getElementById('session-contract-select').value;
-  const sid = document.getElementById('session-id-input').value.trim().toUpperCase();
-  if (!key) { toast('Select a contract first.', 'error'); return; }
-  if (!sid) { toast('Enter or generate a session ID.', 'error'); return; }
+async function createSession() {
 
-  const c   = REGISTRY[key];
-  const res = _createSession(c.course_id, c.tutor_id, sid);
-  if (!res.success) { toast(res.error, 'error'); return; }
+    const select = document.getElementById('session-contract-select');
 
-  // Build the QR URL — same params as Python demo
-  const validity = ts();
-  const url = `${QR_BASE_URL}?tutorID=${c.tutor_id}&course_code=${c.course_id}&reg_no=STUDENT_REG&validity=${validity}`;
+    const value = select.value;
 
-  activeQR = { url, expiresAt: validity + QR_VALIDITY_WINDOW, sessionId: sid, courseKey: key };
+    if (!value) {
+        toast('Select a contract first.', 'error');
+        return;
+    }
 
-  generateQR(url);
-  startCountdown(validity);
-  renderSessionsList();
-  toast(`Session '${sid}' created for ${c.course_id}.`, 'success');
-  refreshSelectDropdowns();
-  refreshDashboard();
+    const [course_id, tutor_id] = value.split('::');
+
+    const attendance_id = document
+        .getElementById('session-id-input')
+        .value
+        .trim()
+        .toUpperCase();
+
+    if (!attendance_id) {
+        toast('Enter a session ID.', 'error');
+        return;
+    }
+
+    try {
+
+        const data = await api('/session/create', {
+            method: 'POST',
+            body: JSON.stringify({
+                course_id,
+                tutor_id,
+                attendance_id
+            })
+        });
+
+        if (data.error) {
+            toast(data.error, 'error');
+            return;
+        }
+
+        const validity = ts();
+
+        const url =
+            `${QR_BASE_URL}` +
+            `?tutorID=${tutor_id}` +
+            `&course_code=${course_id}` +
+            `&validity=${validity}`;
+
+        activeQR = {
+            url,
+            expiresAt: validity + QR_VALIDITY_WINDOW
+        };
+
+        generateQR(url);
+
+        startCountdown(validity);
+
+        renderSessionsList();
+
+        toast(`Session '${attendance_id}' created.`, 'success');
+
+        refreshDashboard();
+
+    } catch(err) {
+        toast(err.message, 'error');
+    }
 }
+
+async function getSessions(course_id, tutor_id) {
+
+    return await api(
+        `/sessions?course_id=${encodeURIComponent(course_id)}&tutor_id=${encodeURIComponent(tutor_id)}`
+    );
+}
+
+async function renderSessionsList() {
+
+    const select = document.getElementById('session-contract-select');
+
+    const value = select.value;
+
+    const tbody = document.getElementById('sessions-tbody');
+
+    if (!value) {
+
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4">
+                    Select a contract.
+                </td>
+            </tr>
+        `;
+
+        return;
+    }
+
+    const [course_id, tutor_id] = value.split('::');
+
+    const sessions = await getSessions(course_id, tutor_id);
+
+    if (!sessions.length) {
+
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4">
+                    No sessions yet.
+                </td>
+            </tr>
+        `;
+
+        return;
+    }
+
+    const nowTs = ts();
+
+    tbody.innerHTML = sessions.reverse().map(s => {
+
+        const active =
+            nowTs - s.created_at <= QR_VALIDITY_WINDOW;
+
+        return `
+            <tr>
+                <td>
+                    <code>${s.attendanceID}</code>
+                </td>
+
+                <td>
+                    ${fmtTs(s.created_at)}
+                </td>
+
+                <td>
+                    ${s.signins}
+                </td>
+
+                <td>
+                    ${
+                        active
+                        ? `<span class="badge badge-green">Active</span>`
+                        : `<span class="badge badge-gray">Expired</span>`
+                    }
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ATTENDANCE
+// ═══════════════════════════════════════════════════════════════
+
+async function getSessionAttendance(course_id, attendance_id) {
+
+    return await api(
+        `/session/attendance?course_id=${encodeURIComponent(course_id)}&attendance_id=${encodeURIComponent(attendance_id)}`
+    );
+}
+
+async function lookupStudent() {
+
+    const reg_no = document
+        .getElementById('lookup-reg')
+        .value
+        .trim()
+        .toUpperCase();
+
+    if (!reg_no) {
+        toast('Enter registration number.', 'error');
+        return;
+    }
+
+    try {
+
+        const records = await api(
+            `/student/${encodeURIComponent(reg_no)}/attendance`
+        );
+
+        const tbody = document.getElementById('lookup-tbody');
+
+        if (!records.length) {
+
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5">
+                        No records found.
+                    </td>
+                </tr>
+            `;
+
+            return;
+        }
+
+        tbody.innerHTML = records.reverse().map(r => `
+            <tr>
+                <td>${r.course_id}</td>
+                <td>${r.attendanceID}</td>
+                <td>${r.tutorID}</td>
+                <td>${fmtTs(r.signed_at)}</td>
+                <td>#${r.block_index}</td>
+            </tr>
+        `).join('');
+
+    } catch(err) {
+        toast(err.message, 'error');
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BLOCKCHAIN
+// ═══════════════════════════════════════════════════════════════
+
+async function renderBlockchain() {
+
+    const chain = await api('/chain');
+
+    const validData = await api('/chain/valid');
+
+    const tbody = document.getElementById('blockchain-tbody');
+
+    if (!chain.length) {
+
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7">
+                    No blocks found.
+                </td>
+            </tr>
+        `;
+
+        return;
+    }
+
+    tbody.innerHTML = chain.reverse().map(b => {
+
+        const d = b.data;
+
+        return `
+            <tr>
+
+                <td>
+                    <code>#${b.index}</code>
+                </td>
+
+                <td>
+                    ${d.type}
+                </td>
+
+                <td>
+                    ${d.course_id || '—'}
+                </td>
+
+                <td>
+                    ${fmtTs(b.timestamp)}
+                </td>
+
+                <td>
+                    <code>${shortHash(b.hash)}</code>
+                </td>
+
+                <td>
+                    <code>${shortHash(b.previous_hash)}</code>
+                </td>
+
+            </tr>
+        `;
+    }).join('');
+
+    const badge = document.getElementById('chain-valid-badge');
+
+    badge.innerHTML = validData.valid
+        ? '✓ Chain Valid'
+        : '✗ Chain Invalid';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+
+async function refreshDashboard() {
+
+    try {
+
+        const contracts = await api('/contracts');
+
+        const signins = await api('/signins/all');
+
+        const sessions = await api('/sessions/all');
+
+        const chain = await api('/chain');
+
+        document.getElementById('stat-contracts').textContent =
+            contracts.length;
+
+        document.getElementById('stat-sessions').textContent =
+            sessions.length;
+
+        document.getElementById('stat-signins').textContent =
+            signins.length;
+
+        document.getElementById('stat-blocks-count').textContent =
+            `${chain.length} blocks`;
+
+    } catch(err) {
+        console.error(err);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// QR
+// ═══════════════════════════════════════════════════════════════
 
 function generateQR(url) {
-  const canvas = document.getElementById('qr-canvas');
-  const placeholder = document.getElementById('qr-placeholder');
-  canvas.innerHTML = '';
-  new QRCode(canvas, { text: url, width: 180, height: 180, colorDark: '#1c1917', colorLight: '#ffffff' });
-  canvas.style.display = 'block';
-  placeholder.style.display = 'none';
 
-  const urlBox = document.getElementById('qr-url-box');
-  urlBox.textContent = url;
-  urlBox.style.display = 'block';
+    const canvas = document.getElementById('qr-canvas');
 
-  document.getElementById('copy-url-btn').disabled  = false;
-  document.getElementById('print-qr-btn').disabled  = false;
+    canvas.innerHTML = '';
+
+    new QRCode(canvas, {
+        text: url,
+        width: 180,
+        height: 180
+    });
+
+    document.getElementById('qr-url-box').textContent = url;
 }
 
 function startCountdown(validity) {
-  clearInterval(countdownTimer);
-  const total = QR_VALIDITY_WINDOW;
-  const cring  = document.getElementById('cring');
-  const clabel = document.getElementById('clabel');
-  const circum = 2 * Math.PI * 24; // r=24
 
-  document.getElementById('countdown-wrap').style.display = 'block';
-  document.getElementById('expired-notice').style.display = 'none';
-  document.getElementById('expiry-text').textContent = 'Valid for 30 minutes';
-  document.getElementById('expiry-text').className   = 'qr-expiry active';
+    clearInterval(countdownTimer);
 
-  function tick() {
-    const elapsed = ts() - validity;
-    const left    = Math.max(0, total - elapsed);
-    const mins    = String(Math.floor(left / 60)).padStart(2, '0');
-    const secs    = String(left % 60).padStart(2, '0');
-    clabel.textContent = `${mins}:${secs}`;
-    const pct    = left / total;
-    cring.style.strokeDashoffset = circum * (1 - pct);
-    cring.style.stroke = left > 300 ? 'var(--accent2)' : left > 60 ? 'var(--accent3)' : 'var(--danger)';
-    if (left === 0) {
-      clearInterval(countdownTimer);
-      document.getElementById('countdown-wrap').style.display = 'none';
-      document.getElementById('expired-notice').style.display = 'block';
+    function tick() {
+
+        const elapsed = ts() - validity;
+
+        const left = Math.max(
+            0,
+            QR_VALIDITY_WINDOW - elapsed
+        );
+
+        const mins = String(
+            Math.floor(left / 60)
+        ).padStart(2, '0');
+
+        const secs = String(
+            left % 60
+        ).padStart(2, '0');
+
+        document.getElementById('clabel').textContent =
+            `${mins}:${secs}`;
+
+        if (left <= 0) {
+            clearInterval(countdownTimer);
+        }
     }
-  }
-  tick();
-  countdownTimer = setInterval(tick, 1000);
-}
 
-function copyURL() {
-  if (!activeQR) return;
-  navigator.clipboard.writeText(activeQR.url).then(() => toast('URL copied to clipboard.', 'success'));
-}
+    tick();
 
-function printQR() {
-  window.print();
-}
-
-function renderSessionsList() {
-  const key   = document.getElementById('session-contract-select').value;
-  const tbody = document.getElementById('sessions-tbody');
-  const title = document.getElementById('sessions-list-title');
-
-  if (!key) {
-    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state" style="padding:20px"><i class="fas fa-calendar-xmark"></i><p>Select a contract.</p></div></td></tr>`;
-    return;
-  }
-  const c        = REGISTRY[key];
-  const sessions = getSessions(c.course_id, c.tutor_id);
-  title.textContent = `Sessions — ${c.course_id}`;
-
-  if (!sessions.length) {
-    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state" style="padding:20px"><i class="fas fa-calendar-xmark"></i><p>No sessions yet.</p></div></td></tr>`;
-    return;
-  }
-  const nowTs = ts();
-  tbody.innerHTML = [...sessions].reverse().map(s => {
-    const signins = getSessionAttendance(c.course_id, s.attendanceID).length;
-    const elapsed = nowTs - s.created_at;
-    const active  = elapsed <= QR_VALIDITY_WINDOW;
-    return `<tr>
-      <td><code>${s.attendanceID}</code></td>
-      <td>${fmtTs(s.created_at)}</td>
-      <td>${signins}</td>
-      <td>${active
-        ? `<span class="badge badge-green"><i class="fas fa-circle" style="font-size:7px"></i> Active</span>`
-        : `<span class="badge badge-gray">Expired</span>`}</td>
-    </tr>`;
-  }).join('');
+    countdownTimer = setInterval(tick, 1000);
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  UI: SESSION ROSTER
+// REFRESH
 // ═══════════════════════════════════════════════════════════════
 
-function renderRosterSessions() {
-  const key    = document.getElementById('roster-contract-select').value;
-  const selSes = document.getElementById('roster-session-select');
-  selSes.innerHTML = '<option value="">— select session —</option>';
-  if (!key) return;
-  const c = REGISTRY[key];
-  getSessions(c.course_id, c.tutor_id).forEach(s => {
-    const opt = document.createElement('option');
-    opt.value = s.attendanceID;
-    opt.textContent = `${s.attendanceID}  (${fmtTs(s.created_at)})`;
-    selSes.appendChild(opt);
-  });
-}
+async function refreshAll() {
 
-function renderRoster() {
-  const key  = document.getElementById('roster-contract-select').value;
-  const sid  = document.getElementById('roster-session-select').value;
-  const tbody = document.getElementById('roster-tbody');
-  const count = document.getElementById('roster-count');
+    await renderDeployedList();
 
-  if (!key || !sid) {
-    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state"><i class="fas fa-users"></i><p>Select contract and session.</p></div></td></tr>`;
-    count.textContent = '';
-    return;
-  }
-  const c       = REGISTRY[key];
-  const records = getSessionAttendance(c.course_id, sid);
-  count.textContent = `${records.length} student${records.length !== 1 ? 's' : ''}`;
+    await refreshDashboard();
 
-  if (!records.length) {
-    tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state"><i class="fas fa-user-slash"></i><p>No sign-ins for this session yet.</p></div></td></tr>`;
-    return;
-  }
-  tbody.innerHTML = records.map((r, i) => `<tr>
-    <td>${i + 1}</td>
-    <td><strong>${r.reg_no}</strong></td>
-    <td>${fmtTs(r.signed_at)}</td>
-    <td><code>#${r.block_index}</code></td>
-  </tr>`).join('');
+    await renderBlockchain();
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  UI: COURSE SUMMARY
+// INIT
 // ═══════════════════════════════════════════════════════════════
 
-function renderSummary() {
-  const key  = document.getElementById('summary-contract-select').value;
-  const meta = document.getElementById('summary-meta');
+document.addEventListener('DOMContentLoaded', async () => {
 
-  if (!key) {
-    document.getElementById('summary-tbody').innerHTML = `<tr><td colspan="5"><div class="empty-state"><i class="fas fa-chart-bar"></i><p>Select a contract.</p></div></td></tr>`;
-    document.getElementById('all-records-tbody').innerHTML = `<tr><td colspan="5"><div class="empty-state"><i class="fas fa-inbox"></i><p>Select a contract above.</p></div></td></tr>`;
-    meta.style.display = 'none';
-    return;
-  }
+    document.getElementById('hdr-name').textContent =
+        LECTURER.name;
 
-  const c       = REGISTRY[key];
-  const summary = attendanceSummary(c.course_id, c.tutor_id);
-  const all     = getAllAttendance(c.course_id);
+    document.getElementById('hdr-avatar').textContent =
+        LECTURER.avatar;
 
-  document.getElementById('summary-label').textContent = `${c.course_id} — ${summary.total_sessions} session${summary.total_sessions !== 1 ? 's' : ''}`;
+    document.getElementById('hdr-tutor-id').textContent =
+        `ID: ${LECTURER.tutor_id}`;
 
-  // mini stats
-  const entries = Object.entries(summary.student_counts);
-  const uniqueStudents = entries.length;
-  meta.style.display = 'block';
-  document.getElementById('summary-stats-row').innerHTML = `
-    <div class="stat-card" style="--card-accent:var(--accent)"><div class="stat-label">Total Sessions</div><div class="stat-value">${summary.total_sessions}</div><i class="fas fa-calendar stat-icon"></i></div>
-    <div class="stat-card" style="--card-accent:var(--accent2)"><div class="stat-label">Unique Students</div><div class="stat-value">${uniqueStudents}</div><i class="fas fa-users stat-icon"></i></div>
-    <div class="stat-card" style="--card-accent:#2563eb"><div class="stat-label">Total Sign-ins</div><div class="stat-value">${all.length}</div><i class="fas fa-signature stat-icon"></i></div>
-  `;
-
-  // per-student table
-  const tbody = document.getElementById('summary-tbody');
-  if (!entries.length) {
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><i class="fas fa-user-slash"></i><p>No sign-ins recorded yet.</p></div></td></tr>`;
-  } else {
-    tbody.innerHTML = entries.sort((a,b) => b[1]-a[1]).map(([reg_no, count]) => {
-      const pct = summary.total_sessions > 0 ? Math.round((count / summary.total_sessions) * 100) : 0;
-      const color = pct >= 75 ? 'var(--accent2)' : pct >= 50 ? 'var(--accent3)' : 'var(--danger)';
-      return `<tr>
-        <td><strong>${reg_no}</strong></td>
-        <td>${count}</td>
-        <td>${summary.total_sessions}</td>
-        <td>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div class="progress-track" style="width:90px">
-              <div class="progress-fill" style="width:${pct}%;background:${color}"></div>
-            </div>
-            <span style="font-weight:700;font-size:13px">${pct}%</span>
-          </div>
-        </td>
-        <td>${pct >= 75
-          ? '<span class="badge badge-green">On Track</span>'
-          : pct >= 50
-          ? '<span class="badge badge-amber">At Risk</span>'
-          : '<span class="badge badge-red">Below Min</span>'}</td>
-      </tr>`;
-    }).join('');
-  }
-
-  // all records
-  const atbody = document.getElementById('all-records-tbody');
-  if (!all.length) {
-    atbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><i class="fas fa-inbox"></i><p>No records.</p></div></td></tr>`;
-  } else {
-    atbody.innerHTML = [...all].reverse().map(r => `<tr>
-      <td><code>#${r.block_index}</code></td>
-      <td><code>${r.attendanceID}</code></td>
-      <td><strong>${r.reg_no}</strong></td>
-      <td><code>${r.tutorID}</code></td>
-      <td>${fmtTs(r.signed_at)}</td>
-    </tr>`).join('');
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  UI: STUDENT LOOKUP
-// ═══════════════════════════════════════════════════════════════
-
-function lookupStudent() {
-  const rawReg  = document.getElementById('lookup-reg').value.trim();
-  const key     = document.getElementById('lookup-contract-select').value;
-  const tbody   = document.getElementById('lookup-tbody');
-  const countEl = document.getElementById('lookup-count');
-  const header  = document.getElementById('lookup-result-header');
-
-  if (!rawReg) { toast('Enter a reg. number to search.', 'error'); return; }
-
-  let records;
-  if (key) {
-    const c = REGISTRY[key];
-    records = getStudentAttendance(c.course_id, c.tutor_id, rawReg);
-  } else {
-    records = getStudentFullRecord(rawReg);
-  }
-
-  countEl.textContent = `${records.length} record${records.length !== 1 ? 's' : ''}`;
-
-  // Stats
-  header.style.display = records.length ? 'block' : 'none';
-  if (records.length) {
-    const courses = [...new Set(records.map(r => r.course_id))];
-    document.getElementById('lookup-stats-row').innerHTML = `
-      <div class="stat-card" style="--card-accent:var(--accent)"><div class="stat-label">Reg. No.</div><div class="stat-value" style="font-size:16px;padding-top:4px">${rawReg.toUpperCase()}</div><i class="fas fa-id-card stat-icon"></i></div>
-      <div class="stat-card" style="--card-accent:#2563eb"><div class="stat-label">Total Sign-ins</div><div class="stat-value">${records.length}</div><i class="fas fa-signature stat-icon"></i></div>
-      <div class="stat-card" style="--card-accent:var(--accent2)"><div class="stat-label">Courses Attended</div><div class="stat-value">${courses.length}</div><i class="fas fa-book stat-icon"></i></div>
-    `;
-  }
-
-  if (!records.length) {
-    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><i class="fas fa-user-slash"></i><p>No records found for <strong>${rawReg.toUpperCase()}</strong>.</p></div></td></tr>`;
-    return;
-  }
-
-  tbody.innerHTML = [...records].reverse().map(r => `<tr>
-    <td><strong>${r.course_id}</strong></td>
-    <td><code>${r.attendanceID}</code></td>
-    <td><code>${r.tutorID}</code></td>
-    <td>${fmtTs(r.signed_at)}</td>
-    <td><code>#${r.block_index}</code></td>
-  </tr>`).join('');
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  UI: BLOCKCHAIN EXPLORER
-// ═══════════════════════════════════════════════════════════════
-
-function renderBlockchain() {
-  renderChainViz();
-  renderBlockchainTable();
-  const valid = isChainValid();
-  const badge = document.getElementById('chain-valid-badge');
-  badge.style.background = valid ? '#dcfce7' : '#fee2e2';
-  badge.style.color       = valid ? '#15803d' : '#dc2626';
-  badge.style.border      = `1px solid ${valid ? '#bbf7d0' : '#fecaca'}`;
-  badge.innerHTML = `<i class="fas ${valid ? 'fa-shield-check':'fa-shield-xmark'}"></i> Chain ${valid ? 'Valid':'INVALID'}`;
-}
-
-function renderChainViz() {
-  const row = document.getElementById('chain-row');
-  document.getElementById('chain-len-label').textContent = `${CHAIN.length} blocks`;
-  row.innerHTML = CHAIN.map(b => {
-    const d = b.data;
-    let cls = 'block-chip';
-    let typeLabel = d.type.replace(/_/g,' ');
-    let body = '';
-    if (d.type === 'genesis') {
-      cls += ' genesis';
-      body = d.message;
-    } else if (d.type === 'session_created') {
-      cls += ' session';
-      body = `${d.course_id} · ${d.attendanceID}`;
-    } else if (d.type === 'attendance_signed') {
-      cls += ' signed';
-      body = `${d.course_id} · ${d.reg_no}`;
-    }
-    return `<div class="${cls}">
-      <div class="bc-idx">BLOCK #${b.index}</div>
-      <div class="bc-type">${typeLabel.toUpperCase()}</div>
-      <div class="bc-body">${body}<br/>${fmtTs(b.timestamp)}</div>
-      <div class="bc-hash">${shortHash(b.hash)}</div>
-    </div>`;
-  }).join('');
-  // scroll to end
-  row.scrollLeft = row.scrollWidth;
-}
-
-function renderBlockchainTable() {
-  const filter = (document.getElementById('block-filter')?.value || '').toLowerCase();
-  const tbody  = document.getElementById('blockchain-tbody');
-  const rows   = [...CHAIN].reverse().filter(b => {
-    if (!filter) return true;
-    return JSON.stringify(b.data).toLowerCase().includes(filter);
-  });
-
-  const typeColors = { genesis:'badge-amber', session_created:'badge-orange', attendance_signed:'badge-green' };
-
-  tbody.innerHTML = rows.map(b => {
-    const d    = b.data;
-    const type = d.type;
-    const summary = type === 'genesis'
-      ? d.message
-      : type === 'session_created'
-      ? `Session ${d.attendanceID} · Tutor ${d.tutorID}`
-      : `${d.reg_no} signed session ${d.attendanceID}`;
-    return `<tr>
-      <td><code>#${b.index}</code></td>
-      <td><span class="badge ${typeColors[type] || 'badge-gray'}">${type.replace(/_/g,' ')}</span></td>
-      <td>${d.course_id || '—'}</td>
-      <td style="font-size:12.5px">${summary}</td>
-      <td style="font-size:12px;color:var(--muted)">${fmtTs(b.timestamp)}</td>
-      <td><code>${shortHash(b.hash)}</code></td>
-      <td><code>${shortHash(b.previous_hash)}</code></td>
-    </tr>`;
-  }).join('');
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  UI: DASHBOARD
-// ═══════════════════════════════════════════════════════════════
-
-function refreshDashboard() {
-  const keys      = Object.keys(REGISTRY);
-  const allSigned = getAllSigned();
-  const allSes    = CHAIN.filter(b => b.data.type === 'session_created');
-
-  document.getElementById('stat-contracts').textContent = keys.length;
-  document.getElementById('stat-sessions').textContent  = allSes.length;
-  document.getElementById('stat-signins').textContent   = allSigned.length;
-  document.getElementById('stat-blocks-count').textContent = `${CHAIN.length} blocks total`;
-
-  const valid = isChainValid();
-  document.getElementById('stat-integrity').innerHTML =
-    `<span style="color:${valid?'var(--accent2)':'var(--danger)'}">${valid ? '✓ Valid' : '✗ Invalid'}</span>`;
-
-  // contracts table
-  const ctbody = document.getElementById('contracts-tbody');
-  if (!keys.length) {
-    ctbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><i class="fas fa-file-contract"></i><p>No contracts deployed yet.</p></div></td></tr>`;
-  } else {
-    ctbody.innerHTML = keys.map(k => {
-      const c        = REGISTRY[k];
-      const sessions = getSessions(c.course_id, c.tutor_id);
-      const signins  = getAllAttendance(c.course_id);
-      const unique   = new Set(signins.map(r => r.reg_no)).size;
-      return `<tr>
-        <td><strong>${c.course_id}</strong></td>
-        <td><code>${c.tutor_id}</code></td>
-        <td>${sessions.length}</td>
-        <td>${signins.length}</td>
-        <td>${unique}</td>
-        <td>
-          <button class="btn btn-outline btn-sm" onclick="navigate('session-roster');setRosterContract('${k}')">Roster</button>
-          <button class="btn btn-outline btn-sm" onclick="navigate('summary');setSummaryContract('${k}')">Summary</button>
-        </td>
-      </tr>`;
-    }).join('');
-  }
-
-  // recent sign-ins
-  const rtbody = document.getElementById('recent-signins-tbody');
-  const recent = [...allSigned].reverse().slice(0, 8);
-  if (!recent.length) {
-    rtbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><i class="fas fa-inbox"></i><p>No sign-ins yet.</p></div></td></tr>`;
-  } else {
-    rtbody.innerHTML = recent.map(r => `<tr>
-      <td><code>#${r.block_index}</code></td>
-      <td><strong>${r.course_id}</strong></td>
-      <td><code>${r.attendanceID}</code></td>
-      <td>${r.reg_no}</td>
-      <td>${fmtTs(r.signed_at)}</td>
-    </tr>`).join('');
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  SELECT HELPERS
-// ═══════════════════════════════════════════════════════════════
-
-function refreshSelectDropdowns() {
-  const keys = Object.keys(REGISTRY);
-  const selIds = [
-    'active-contract-select',
-    'session-contract-select',
-    'roster-contract-select',
-    'summary-contract-select',
-    'lookup-contract-select',
-  ];
-  selIds.forEach(id => {
-    const sel    = document.getElementById(id);
-    if (!sel) return;
-    const isLookup = id === 'lookup-contract-select';
-    const curVal = sel.value;
-    sel.innerHTML = isLookup
-      ? '<option value="">All courses</option>'
-      : '<option value="">— select contract —</option>';
-    keys.forEach(k => {
-      const c   = REGISTRY[k];
-      const opt = document.createElement('option');
-      opt.value = k;
-      opt.textContent = `${c.course_id} :: ${c.tutor_id}`;
-      sel.appendChild(opt);
-    });
-    if (curVal) sel.value = curVal;
-  });
-}
-
-function onContractChange() {
-  const key = document.getElementById('active-contract-select').value;
-  if (!key) return;
-  document.getElementById('session-contract-select').value = key;
-  renderSessionsList();
-}
-
-function setRosterContract(key) {
-  document.getElementById('roster-contract-select').value = key;
-  renderRosterSessions();
-}
-function setSummaryContract(key) {
-  document.getElementById('summary-contract-select').value = key;
-  renderSummary();
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  NAVIGATION
-// ═══════════════════════════════════════════════════════════════
-
-function navigate(pageId) {
-  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  const navEl  = document.querySelector(`.nav-item[data-page="${pageId}"]`);
-  const pageEl = document.getElementById(`page-${pageId}`);
-  if (navEl)  navEl.classList.add('active');
-  if (pageEl) pageEl.classList.add('active');
-
-  // per-page refresh
-  if (pageId === 'dashboard')      refreshDashboard();
-  if (pageId === 'deploy')         renderDeployedList();
-  if (pageId === 'create-session') renderSessionsList();
-  if (pageId === 'blockchain')     renderBlockchain();
-}
-
-document.querySelectorAll('.nav-item').forEach(item => {
-  item.addEventListener('click', e => {
-    e.preventDefault();
-    navigate(item.dataset.page);
-  });
-});
-
-// ═══════════════════════════════════════════════════════════════
-//  MODAL
-// ═══════════════════════════════════════════════════════════════
-
-function closeModal(e) {
-  if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
-}
-function closeModalById(id) {
-  document.getElementById(id).classList.remove('open');
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  TOAST
-// ═══════════════════════════════════════════════════════════════
-
-function toast(msg, type = 'info') {
-  const el   = document.getElementById('toast');
-  const msgEl = document.getElementById('toast-msg');
-  const icons = { success:'fa-circle-check', error:'fa-circle-xmark', info:'fa-circle-info' };
-  el.querySelector('i').className = `fas ${icons[type] || icons.info} ti`;
-  el.className = `show ${type}`;
-  msgEl.textContent = msg;
-  clearTimeout(el._t);
-  el._t = setTimeout(() => el.classList.remove('show'), 4000);
-}
-
-// ═══════════════════════════════════════════════════════════════
-//  GLOBAL REFRESH
-// ═══════════════════════════════════════════════════════════════
-
-function refreshAll() {
-  refreshSelectDropdowns();
-  refreshDashboard();
-  renderDeployedList();
-  document.getElementById('hdr-chain-len').textContent = `${CHAIN.length} blocks`;
-}
-
-// ── Init ────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('hdr-name').textContent     = LECTURER.name;
-  document.getElementById('hdr-avatar').textContent   = LECTURER.avatar;
-  document.getElementById('hdr-tutor-id').textContent = `ID: ${LECTURER.tutor_id}`;
-  document.getElementById('dash-name').textContent    = LECTURER.name;
-  document.getElementById('dash-tid').textContent     = LECTURER.tutor_id;
-
-  refreshAll();
+    await refreshAll();
 });
 </script>
+
 </body>
 </html>
