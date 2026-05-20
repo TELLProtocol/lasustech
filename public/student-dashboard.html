@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LASUSTECH e-Attendance — Student Portal</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:        #0b0f1a;
+      --surface:   #111827;
+      --surface2:  #1a2235;
+      --border:    #1f2d45;
+      --accent:    #3b82f6;
+      --accent2:   #10b981;
+      --warn:      #f59e0b;
+      --danger:    #ef4444;
+      --text:      #e2e8f0;
+      --muted:     #64748b;
+      --radius:    10px;
+      --font:      'Space Grotesk', sans-serif;
+      --mono:      'JetBrains Mono', monospace;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .header-inner {
+      max-width: 1280px; margin: 0 auto;
+      padding: 0 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 60px;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .logo-icon {
+      width: 34px; height: 34px; border-radius: 8px;
+      background: var(--accent); display: grid; place-items: center;
+      font-size: 16px; color: #fff;
+    }
+    .logo-wordmark { font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: -.3px; }
+    .logo-wordmark span { color: var(--accent); }
+
+    .header-right { display: flex; align-items: center; gap: 16px; }
+    .chain-badge {
+      display: flex; align-items: center; gap: 6px;
+      background: rgba(16,185,129,.12); border: 1px solid rgba(16,185,129,.25);
+      border-radius: 20px; padding: 4px 12px;
+      font-size: 12px; font-weight: 600; color: var(--accent2);
+      font-family: var(--mono);
+    }
+    .chain-badge .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent2); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    .student-pill {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 30px; padding: 5px 14px 5px 6px; cursor: pointer;
+    }
+    .avatar {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: var(--accent); display: grid; place-items: center;
+      font-size: 12px; font-weight: 700; color: #fff;
+    }
+    .student-name { font-size: 14px; font-weight: 600; }
+    .student-reg  { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+
+    /* ── Layout ── */
+    .app-body {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      max-width: 1280px; margin: 0 auto; width: 100%;
+      padding: 28px 24px; gap: 28px; flex: 1;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 12px 0; height: fit-content;
+      position: sticky; top: 88px;
+    }
+    .sidebar-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+      color: var(--muted); padding: 6px 18px 10px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 18px; cursor: pointer; border-left: 3px solid transparent;
+      transition: all .2s; color: var(--muted); font-size: 14px; font-weight: 500;
+      text-decoration: none;
+    }
+    .nav-item:hover { color: var(--text); background: var(--surface2); }
+    .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(59,130,246,.07); }
+    .nav-item i { width: 16px; text-align: center; }
+
+    .sidebar-divider { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
+
+    /* ── Main ── */
+    main { min-width: 0; }
+    .page { display: none; }
+    .page.active { display: block; animation: fadein .25s ease; }
+    @keyframes fadein { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+
+    .page-title { font-size: 22px; font-weight: 700; margin-bottom: 22px; }
+    .page-title span { color: var(--accent); }
+
+    /* ── Stats row ── */
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px; }
+    .stat-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px 20px;
+      display: flex; align-items: center; gap: 16px;
+      transition: border-color .2s;
+    }
+    .stat-card:hover { border-color: var(--accent); }
+    .stat-icon {
+      width: 44px; height: 44px; border-radius: 10px;
+      display: grid; place-items: center; font-size: 18px; flex-shrink: 0;
+    }
+    .stat-icon.blue   { background: rgba(59,130,246,.15); color: var(--accent); }
+    .stat-icon.green  { background: rgba(16,185,129,.15); color: var(--accent2); }
+    .stat-icon.yellow { background: rgba(245,158,11,.15);  color: var(--warn); }
+    .stat-icon.red    { background: rgba(239,68,68,.15);   color: var(--danger); }
+    .stat-label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+    .stat-value { font-size: 26px; font-weight: 700; }
+
+    /* ── Table ── */
+    .table-wrap {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden; margin-bottom: 28px;
+    }
+    .table-header {
+      padding: 16px 20px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .table-header h3 { font-size: 15px; font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: var(--surface2); }
+    th {
+      padding: 11px 16px; text-align: left; font-size: 12px;
+      font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .6px;
+    }
+    td { padding: 13px 16px; font-size: 14px; border-top: 1px solid var(--border); }
+    tbody tr:hover { background: rgba(255,255,255,.02); }
+    code { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600;
+    }
+    .badge.present { background: rgba(16,185,129,.12); color: var(--accent2); border: 1px solid rgba(16,185,129,.25); }
+    .badge.absent  { background: rgba(239,68,68,.12);  color: var(--danger);  border: 1px solid rgba(239,68,68,.25); }
+    .badge.expired { background: rgba(245,158,11,.12); color: var(--warn);    border: 1px solid rgba(245,158,11,.25); }
+
+    /* ── QR Sign-In ── */
+    .sign-in-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px;
+    }
+    .card h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+    .card p  { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+
+    .qr-box {
+      width: 200px; height: 200px; margin: 0 auto 20px;
+      background: var(--surface2); border: 2px dashed var(--border);
+      border-radius: 12px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 10px; color: var(--muted); cursor: pointer;
+      transition: border-color .2s;
+    }
+    .qr-box:hover { border-color: var(--accent); color: var(--accent); }
+    .qr-box i { font-size: 56px; }
+    .qr-box span { font-size: 13px; }
+
+    .input-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+    .input-group label { font-size: 13px; font-weight: 600; color: var(--muted); }
+    .input-group input, .input-group select {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 14px; color: var(--text);
+      font-family: var(--font); font-size: 14px; outline: none;
+      transition: border-color .2s;
+    }
+    .input-group input:focus, .input-group select:focus { border-color: var(--accent); }
+    .input-group input::placeholder { color: var(--muted); }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 8px; padding: 10px 20px; border-radius: 8px;
+      font-family: var(--font); font-size: 14px; font-weight: 600;
+      cursor: pointer; border: none; transition: all .2s; width: 100%;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-outline {
+      background: transparent; color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+    .btn-outline:hover { background: rgba(59,130,246,.1); }
+    .btn-success { background: var(--accent2); color: #fff; }
+    .btn-success:hover { background: #059669; }
+
+    /* ── QR URL paste input ── */
+    .url-input-row { display: flex; gap: 10px; margin-top: 10px; }
+    .url-input-row input { flex: 1; }
+
+    /* ── Blockchain explorer ── */
+    .chain-scroll { display: flex; gap: 16px; overflow-x: auto; padding: 4px 0 12px; }
+    .chain-scroll::-webkit-scrollbar { height: 6px; }
+    .chain-scroll::-webkit-scrollbar-track { background: var(--surface2); border-radius: 3px; }
+    .chain-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .block-card {
+      min-width: 220px; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 10px; padding: 16px;
+      position: relative; flex-shrink: 0;
+      transition: border-color .2s;
+    }
+    .block-card:hover { border-color: var(--accent); }
+    .block-card.genesis { border-color: rgba(245,158,11,.4); }
+    .block-card:not(:last-child)::after {
+      content: "→";
+      position: absolute; right: -14px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted); font-size: 14px; z-index: 1;
+    }
+    .block-idx { font-size: 11px; font-weight: 700; color: var(--accent); font-family: var(--mono); margin-bottom: 8px; }
+    .block-type { font-size: 12px; font-weight: 600; margin-bottom: 8px; }
+    .block-meta { font-size: 11px; color: var(--muted); line-height: 1.7; }
+    .block-hash { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 10px; word-break: break-all; border-top: 1px solid var(--border); padding-top: 8px; }
+
+    /* ── Alert / toast ── */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px 20px; display: flex; align-items: center; gap: 12px;
+      max-width: 360px; box-shadow: 0 8px 32px rgba(0,0,0,.4);
+      transform: translateY(20px); opacity: 0; pointer-events: none;
+      transition: all .3s;
+    }
+    #toast.show { transform: none; opacity: 1; pointer-events: auto; }
+    #toast.success .toast-icon { color: var(--accent2); }
+    #toast.error   .toast-icon { color: var(--danger); }
+    #toast.info    .toast-icon { color: var(--accent); }
+    .toast-msg { font-size: 14px; line-height: 1.5; }
+
+    /* ── Progress bar ── */
+    .progress-bg { background: var(--surface2); border-radius: 4px; height: 8px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 4px; background: var(--accent2); transition: width .6s; }
+
+    /* ── Empty state ── */
+    .empty { text-align: center; padding: 48px 20px; color: var(--muted); }
+    .empty i { font-size: 40px; margin-bottom: 12px; display: block; }
+
+    /* ── Responsive ── */
+    @media(max-width:900px) {
+      .app-body { grid-template-columns: 1fr; }
+      .sidebar  { display: none; }
+      .sign-in-grid { grid-template-columns: 1fr; }
+    }
+    @media(max-width:600px) {
+      .stats-row { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <div class="header-inner">
+    <a class="logo" href="#">
+      <div class="logo-icon"><i class="fas fa-link"></i></div>
+      <div class="logo-wordmark">LASUSTECH <span>Attend</span></div>
+    </a>
+    <div class="header-right">
+      <div class="chain-badge">
+        <span class="dot"></span>
+        <span id="chain-length">— blocks</span>
+      </div>
+      <div class="student-pill">
+        <div class="avatar" id="hdr-avatar">—</div>
+        <div>
+          <div class="student-name" id="hdr-name">Loading…</div>
+          <div class="student-reg"  id="hdr-reg">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ── App Body ── -->
+<div class="app-body">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-label">Student Portal</div>
+    <a class="nav-item active" data-page="dashboard">
+      <i class="fas fa-gauge-high"></i> Dashboard
+    </a>
+    <a class="nav-item" data-page="my-attendance">
+      <i class="fas fa-calendar-check"></i> My Attendance
+    </a>
+    <a class="nav-item" data-page="sign-in">
+      <i class="fas fa-qrcode"></i> Sign Attendance
+    </a>
+    <hr class="sidebar-divider" />
+    <a class="nav-item" data-page="blockchain">
+      <i class="fas fa-cube"></i> Blockchain Explorer
+    </a>
+  </aside>
+
+  <!-- Main -->
+  <main>
+
+    <!-- ══ Dashboard ══ -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-title">Welcome back, <span id="greeting-name">Student</span></div>
+
+      <div class="stats-row" id="stats-row">
+        <div class="stat-card">
+          <div class="stat-icon blue"><i class="fas fa-book-open"></i></div>
+          <div><div class="stat-label">Enrolled Courses</div><div class="stat-value" id="stat-courses">—</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green"><i class="fas fa-calendar-check"></i></div>
+          <div><div class="stat-label">Total Sign-ins</div><div class="stat-value" id="stat-total">—</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon blue"><i class="fas fa-cube"></i></div>
+          <div><div class="stat-label">Blockchain Blocks</div><div class="stat-value" id="stat-blocks">—</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green"><i class="fas fa-shield-check"></i></div>
+          <div><div class="stat-label">Chain Valid</div><div class="stat-value" id="stat-valid">—</div></div>
+        </div>
+      </div>
+
+      <!-- Attendance by course -->
+      <div class="table-wrap">
+        <div class="table-header">
+          <h3>Attendance by Course</h3>
+          <span style="font-size:12px;color:var(--muted)">From blockchain ledger</span>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Course Code</th>
+              <th>Sessions Attended</th>
+              <th>Attendance Rate</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="course-summary-tbody">
+            <tr><td colspan="4" class="empty"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Recent records -->
+      <div class="table-wrap">
+        <div class="table-header"><h3>Recent Attendance Records</h3></div>
+        <table>
+          <thead>
+            <tr>
+              <th>Course</th>
+              <th>Session ID</th>
+              <th>Tutor ID</th>
+              <th>Signed At</th>
+              <th>Block #</th>
+            </tr>
+          </thead>
+          <tbody id="recent-tbody">
+            <tr><td colspan="5" class="empty"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ My Attendance ══ -->
+    <div class="page" id="page-my-attendance">
+      <div class="page-title">My <span>Attendance</span> Records</div>
+
+      <div class="table-wrap">
+        <div class="table-header">
+          <h3>Full Attendance History</h3>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="filter-course" placeholder="Filter by course…"
+              style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;
+                     padding:6px 12px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;width:160px" />
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Course Code</th>
+              <th>Session ID</th>
+              <th>Tutor ID</th>
+              <th>Signed At</th>
+              <th>Block #</th>
+            </tr>
+          </thead>
+          <tbody id="full-history-tbody">
+            <tr><td colspan="6" class="empty"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ══ Sign Attendance ══ -->
+    <div class="page" id="page-sign-in">
+      <div class="page-title">Sign <span>Attendance</span></div>
+      <div class="sign-in-grid">
+
+        <!-- QR paste / URL entry -->
+        <div class="card">
+          <h3><i class="fas fa-qrcode" style="color:var(--accent);margin-right:8px"></i>Scan / Paste QR Link</h3>
+          <p>Paste the attendance URL generated by your lecturer, or scan the QR code.</p>
+          <div class="qr-box" id="qr-box" title="Click to paste from clipboard">
+            <i class="fas fa-qrcode"></i>
+            <span>Click to paste URL</span>
+          </div>
+
+          <div class="input-group">
+            <label>Attendance URL</label>
+            <input type="text" id="attendance-url" placeholder="https://lasustech-eattendance.edu.ng/signed.html?tutorID=…" />
+          </div>
+
+          <button class="btn btn-primary" onclick="parseAndFillURL()">
+            <i class="fas fa-arrow-right"></i> Parse URL
+          </button>
+        </div>
+
+        <!-- Confirm & submit -->
+        <div class="card">
+          <h3><i class="fas fa-pen-to-square" style="color:var(--accent2);margin-right:8px"></i>Confirm Details</h3>
+          <p>Verify the pre-filled details match your course before signing.</p>
+
+          <div class="input-group">
+            <label>Reg. Number (matric)</label>
+            <input type="text" id="field-reg-no" placeholder="LST/20/0042" />
+          </div>
+          <div class="input-group">
+            <label>Course Code</label>
+            <input type="text" id="field-course" placeholder="CSC511" readonly />
+          </div>
+          <div class="input-group">
+            <label>Tutor ID</label>
+            <input type="text" id="field-tutor" placeholder="6A0B3354" readonly />
+          </div>
+          <div class="input-group">
+            <label>Validity Timestamp</label>
+            <input type="text" id="field-validity" placeholder="Unix timestamp" readonly />
+          </div>
+
+          <button class="btn btn-success" onclick="signAttendance()">
+            <i class="fas fa-signature"></i> Sign Attendance
+          </button>
+        </div>
+      </div>
+
+      <!-- Result -->
+      <div id="sign-result" style="display:none;margin-top:20px"></div>
+    </div>
+
+    <!-- ══ Blockchain Explorer ══ -->
+    <div class="page" id="page-blockchain">
+      <div class="page-title">Blockchain <span>Explorer</span></div>
+
+      <div class="card" style="margin-bottom:24px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <h3>Chain Visualization</h3>
+          <span id="chain-valid-badge" style="font-size:12px;font-weight:600"></span>
+        </div>
+        <div class="chain-scroll" id="chain-scroll"></div>
+      </div>
+
+      <div class="table-wrap">
+        <div class="table-header"><h3>All Blocks</h3></div>
+        <table>
+          <thead>
+            <tr>
+              <th>Block #</th>
+              <th>Type</th>
+              <th>Course</th>
+              <th>Data Summary</th>
+              <th>Timestamp</th>
+              <th>Hash</th>
+            </tr>
+          </thead>
+          <tbody id="blockchain-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast -->
+<div id="toast">
+  <i class="fas fa-circle-check toast-icon"></i>
+  <div class="toast-msg" id="toast-msg"></div>
+</div>
+
+<script>
+// ── Mock data matching attendBlockchain.py data structures ─────────────────
+// In production, these would be fetched from the Python backend API.
+
+const STUDENT = {
+  name:   "Alice Johnson",
+  reg_no: "LST/20/0042",
+  avatar: "AJ",
+};
+
+const QR_VALIDITY_WINDOW = 30 * 60; // 30 minutes in seconds
+
+// Simulated blockchain — mirrors the Python Block.to_dict() structure
+// Records are typed as "genesis", "session_created", or "attendance_signed"
+const now = Math.floor(Date.now() / 1000);
+const MOCK_CHAIN = [
+  {
+    index: 0, timestamp: now - 86400 * 5,
+    data: { type: "genesis", message: "LASUSTECH e-Attendance Ledger" },
+    previous_hash: "0",
+    hash: "0000000000000000000000000000000000000000000000000000000000000000",
+  },
+  {
+    index: 1, timestamp: now - 86400 * 4,
+    data: { type: "session_created", tutorID: "6A0B3354", course_id: "CSC511", attendanceID: "4A4A23Z", created_at: now - 86400 * 4 },
+    previous_hash: "0000000000000000000000000000000000000000000000000000000000000000",
+    hash: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+  },
+  {
+    index: 2, timestamp: now - 86400 * 4 + 120,
+    data: { type: "attendance_signed", tutorID: "6A0B3354", course_id: "CSC511", attendanceID: "4A4A23Z", reg_no: "LST/20/0042", signed_at: now - 86400 * 4 + 120 },
+    previous_hash: "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+    hash: "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3",
+  },
+  {
+    index: 3, timestamp: now - 86400 * 3,
+    data: { type: "session_created", tutorID: "7B1C4421", course_id: "MTH401", attendanceID: "5B5B34W", created_at: now - 86400 * 3 },
+    previous_hash: "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3",
+    hash: "c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
+  },
+  {
+    index: 4, timestamp: now - 86400 * 3 + 200,
+    data: { type: "attendance_signed", tutorID: "7B1C4421", course_id: "MTH401", attendanceID: "5B5B34W", reg_no: "LST/20/0042", signed_at: now - 86400 * 3 + 200 },
+    previous_hash: "c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
+    hash: "d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5",
+  },
+  {
+    index: 5, timestamp: now - 86400 * 2,
+    data: { type: "session_created", tutorID: "6A0B3354", course_id: "CSC511", attendanceID: "6C6C45X", created_at: now - 86400 * 2 },
+    previous_hash: "d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5",
+    hash: "e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6",
+  },
+  {
+    index: 6, timestamp: now - 86400 * 2 + 300,
+    data: { type: "attendance_signed", tutorID: "6A0B3354", course_id: "CSC511", attendanceID: "6C6C45X", reg_no: "LST/20/0042", signed_at: now - 86400 * 2 + 300 },
+    previous_hash: "e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6",
+    hash: "f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1",
+  },
+];
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function fmtTime(unix) {
+  return new Date(unix * 1000).toLocaleString('en-NG', {
+    year:'numeric', month:'short', day:'numeric',
+    hour:'2-digit', minute:'2-digit'
+  });
+}
+function shortHash(h) { return h.slice(0, 8) + '…' + h.slice(-6); }
+
+function toast(msg, type = 'info') {
+  const el  = document.getElementById('toast');
+  const msg_el = document.getElementById('toast-msg');
+  const icons = { success: 'fa-circle-check', error: 'fa-circle-xmark', info: 'fa-circle-info' };
+  el.querySelector('i').className = `fas ${icons[type] || icons.info} toast-icon`;
+  el.className = `show ${type}`;
+  msg_el.textContent = msg;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 4000);
+}
+
+// ── Student-scoped chain queries (mirror Python methods) ───────────────────
+
+/** get_student_full_record(reg_no) */
+function getStudentFullRecord(reg_no) {
+  return MOCK_CHAIN
+    .filter(b => b.data.type === 'attendance_signed' && b.data.reg_no === reg_no.toUpperCase().trim())
+    .map(b => ({ ...b.data, block_index: b.index }));
+}
+
+/** attendance_summary per course */
+function getCourseSummary(reg_no) {
+  const records = getStudentFullRecord(reg_no);
+  const summary = {};
+  records.forEach(r => {
+    if (!summary[r.course_id]) summary[r.course_id] = { count: 0, sessions: new Set() };
+    summary[r.course_id].count++;
+    summary[r.course_id].sessions.add(r.attendanceID);
+  });
+  // count total sessions per course from chain
+  const allSessions = {};
+  MOCK_CHAIN.forEach(b => {
+    if (b.data.type === 'session_created') {
+      const c = b.data.course_id;
+      allSessions[c] = (allSessions[c] || 0) + 1;
+    }
+  });
+  return Object.entries(summary).map(([course_id, v]) => ({
+    course_id,
+    attended: v.count,
+    total: allSessions[course_id] || v.count,
+  }));
+}
+
+/** is_chain_valid() */
+function isChainValid() {
+  // Simplified: just check hash linkage from our mock
+  for (let i = 1; i < MOCK_CHAIN.length; i++) {
+    if (MOCK_CHAIN[i].previous_hash !== MOCK_CHAIN[i - 1].hash) return false;
+  }
+  return true;
+}
+
+/** sign_attendance(url) — mirrors Python CourseContract.sign_attendance */
+function signAttendance() {
+  const url      = document.getElementById('attendance-url').value.trim();
+  const reg_no   = document.getElementById('field-reg-no').value.trim().toUpperCase();
+
+  if (!url || !reg_no) { toast('Please fill in your reg. number and paste the attendance URL.', 'error'); return; }
+
+  let params;
+  try {
+    const u = new URL(url);
+    params = Object.fromEntries(u.searchParams.entries());
+  } catch {
+    toast('Invalid URL format.', 'error'); return;
+  }
+
+  const required = ['tutorID', 'course_code', 'reg_no', 'validity'];
+  const missing  = required.filter(k => !params[k]);
+  if (missing.length) {
+    showSignResult(false, `Missing URL parameters: ${missing.join(', ')}`);
+    return;
+  }
+
+  const validity = parseFloat(params.validity);
+  const nowTs    = Math.floor(Date.now() / 1000);
+
+  if (nowTs - validity > QR_VALIDITY_WINDOW) {
+    showSignResult(false, `QR code expired (${QR_VALIDITY_WINDOW / 60}-min limit). Ask your lecturer to regenerate.`);
+    return;
+  }
+
+  // Check duplicate (mock check against MOCK_CHAIN)
+  const alreadySigned = MOCK_CHAIN.some(b =>
+    b.data.type         === 'attendance_signed' &&
+    b.data.course_id    === params.course_code &&
+    b.data.reg_no       === reg_no &&
+    b.data.attendanceID !== undefined   // any session for this course
+  );
+
+  if (alreadySigned) {
+    showSignResult(false, `'${reg_no}' has already signed attendance for ${params.course_code} in an active session.`);
+    return;
+  }
+
+  // Simulate successful record
+  const newBlock = {
+    index: MOCK_CHAIN.length,
+    timestamp: nowTs,
+    data: {
+      type:         'attendance_signed',
+      tutorID:      params.tutorID,
+      course_id:    params.course_code,
+      attendanceID: `SESSION_${params.tutorID.slice(-4)}`,
+      reg_no:       reg_no,
+      signed_at:    nowTs,
+    },
+    previous_hash: MOCK_CHAIN[MOCK_CHAIN.length - 1].hash,
+    hash: Math.random().toString(16).slice(2).padEnd(64, '0'),
+  };
+  MOCK_CHAIN.push(newBlock);
+
+  showSignResult(true, `Attendance recorded for ${reg_no} on ${params.course_code}. Block #${newBlock.index} added to chain.`, newBlock);
+  toast(`Signed! Block #${newBlock.index} committed.`, 'success');
+  refreshAll();
+}
+
+function showSignResult(success, message, block) {
+  const el = document.getElementById('sign-result');
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div class="card" style="border-color:${success ? 'rgba(16,185,129,.4)' : 'rgba(239,68,68,.4)'}">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:${block ? '12px' : '0'}">
+        <i class="fas ${success ? 'fa-circle-check' : 'fa-circle-xmark'}"
+           style="color:${success ? 'var(--accent2)' : 'var(--danger)'};font-size:20px"></i>
+        <span style="font-weight:600">${message}</span>
+      </div>
+      ${block ? `
+        <div style="font-size:12px;color:var(--muted);font-family:var(--mono);line-height:1.8">
+          <div>Block index: ${block.index}</div>
+          <div>Course: ${block.data.course_id}</div>
+          <div>Reg No: ${block.data.reg_no}</div>
+          <div>Hash: ${block.hash}</div>
+          <div>Signed at: ${fmtTime(block.data.signed_at)}</div>
+        </div>
+      ` : ''}
+    </div>`;
+}
+
+function parseAndFillURL() {
+  const url = document.getElementById('attendance-url').value.trim();
+  try {
+    const u = new URL(url);
+    const p = Object.fromEntries(u.searchParams.entries());
+    if (p.course_code) document.getElementById('field-course').value   = p.course_code;
+    if (p.tutorID)     document.getElementById('field-tutor').value    = p.tutorID;
+    if (p.validity)    document.getElementById('field-validity').value = p.validity;
+    if (p.reg_no)      document.getElementById('field-reg-no').value   = p.reg_no;
+    toast('URL parsed — confirm your details and sign.', 'info');
+  } catch {
+    toast('Could not parse URL. Check the format.', 'error');
+  }
+}
+
+// ── Render functions ────────────────────────────────────────────────────────
+
+function renderDashboard() {
+  const records = getStudentFullRecord(STUDENT.reg_no);
+  const summary = getCourseSummary(STUDENT.reg_no);
+
+  document.getElementById('stat-courses').textContent = summary.length;
+  document.getElementById('stat-total').textContent   = records.length;
+  document.getElementById('stat-blocks').textContent  = MOCK_CHAIN.length;
+  document.getElementById('stat-valid').innerHTML     =
+    isChainValid()
+      ? '<span style="color:var(--accent2)">✓ Valid</span>'
+      : '<span style="color:var(--danger)">✗ Invalid</span>';
+
+  // Course summary table
+  const tbody = document.getElementById('course-summary-tbody');
+  if (!summary.length) {
+    tbody.innerHTML = `<tr><td colspan="4" class="empty"><i class="fas fa-folder-open"></i>No records found.</td></tr>`;
+  } else {
+    tbody.innerHTML = summary.map(row => {
+      const pct = Math.round((row.attended / row.total) * 100);
+      return `<tr>
+        <td><strong>${row.course_id}</strong></td>
+        <td>${row.attended} / ${row.total}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="progress-bg" style="width:120px;flex-shrink:0">
+              <div class="progress-fill" style="width:${pct}%;background:${pct>=75?'var(--accent2)':pct>=50?'var(--warn)':'var(--danger)'}"></div>
+            </div>
+            <span style="font-size:13px;font-weight:600">${pct}%</span>
+          </div>
+        </td>
+        <td>
+          <span class="badge ${pct>=75?'present':pct>=50?'expired':'absent'}">
+            ${pct>=75?'On Track':pct>=50?'At Risk':'Below Min'}
+          </span>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Recent records (last 5)
+  const recent = [...records].reverse().slice(0, 5);
+  const rtbody = document.getElementById('recent-tbody');
+  if (!recent.length) {
+    rtbody.innerHTML = `<tr><td colspan="5" class="empty"><i class="fas fa-inbox"></i>No records yet.</td></tr>`;
+  } else {
+    rtbody.innerHTML = recent.map(r => `<tr>
+      <td><strong>${r.course_id}</strong></td>
+      <td><code>${r.attendanceID}</code></td>
+      <td><code>${r.tutorID}</code></td>
+      <td>${fmtTime(r.signed_at)}</td>
+      <td><code>#${r.block_index}</code></td>
+    </tr>`).join('');
+  }
+}
+
+function renderMyAttendance() {
+  const records = getStudentFullRecord(STUDENT.reg_no);
+  const tbody   = document.getElementById('full-history-tbody');
+  const filter  = document.getElementById('filter-course').value.trim().toUpperCase();
+  const filtered = filter ? records.filter(r => r.course_id.includes(filter)) : records;
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty"><i class="fas fa-folder-open"></i>No records found.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = [...filtered].reverse().map((r, i) => `<tr>
+    <td style="color:var(--muted)">${filtered.length - i}</td>
+    <td><strong>${r.course_id}</strong></td>
+    <td><code>${r.attendanceID}</code></td>
+    <td><code>${r.tutorID}</code></td>
+    <td>${fmtTime(r.signed_at)}</td>
+    <td><code>#${r.block_index}</code></td>
+  </tr>`).join('');
+}
+
+function renderBlockchain() {
+  // Chain scroll
+  const scroll = document.getElementById('chain-scroll');
+  scroll.innerHTML = MOCK_CHAIN.map(b => {
+    const isGenesis = b.data.type === 'genesis';
+    const isSigned  = b.data.type === 'attendance_signed';
+    const isSession = b.data.type === 'session_created';
+    const color     = isGenesis ? 'var(--warn)' : isSigned ? 'var(--accent2)' : 'var(--accent)';
+    const icon      = isGenesis ? '⛓' : isSigned ? '✍' : '📋';
+    return `<div class="block-card ${isGenesis ? 'genesis' : ''}">
+      <div class="block-idx">BLOCK #${b.index}</div>
+      <div class="block-type" style="color:${color}">${icon} ${b.data.type.replace(/_/g,' ').toUpperCase()}</div>
+      <div class="block-meta">
+        ${b.data.course_id ? `<div>Course: <strong>${b.data.course_id}</strong></div>` : ''}
+        ${b.data.reg_no    ? `<div>Reg: <strong>${b.data.reg_no}</strong></div>` : ''}
+        ${b.data.message   ? `<div>${b.data.message}</div>` : ''}
+        <div>${fmtTime(b.timestamp)}</div>
+      </div>
+      <div class="block-hash">${shortHash(b.hash)}</div>
+    </div>`;
+  }).join('');
+
+  // Valid badge
+  const valid = isChainValid();
+  document.getElementById('chain-valid-badge').innerHTML =
+    `<span style="color:${valid ? 'var(--accent2)':'var(--danger)'}">
+      <i class="fas ${valid ? 'fa-shield-check':'fa-shield-xmark'}"></i>
+      Chain ${valid ? 'Valid' : 'INVALID'}
+    </span>`;
+
+  // Table
+  document.getElementById('blockchain-tbody').innerHTML = MOCK_CHAIN.map(b => {
+    const d = b.data;
+    const summary = d.type === 'genesis'
+      ? d.message
+      : d.type === 'session_created'
+      ? `Session ${d.attendanceID} | Tutor ${d.tutorID}`
+      : `${d.reg_no} signed session ${d.attendanceID}`;
+    return `<tr>
+      <td><code>#${b.index}</code></td>
+      <td><span class="badge ${d.type === 'attendance_signed' ? 'present' : d.type === 'session_created' ? 'expired' : 'absent'}"
+        style="${d.type==='genesis'?'background:rgba(245,158,11,.12);color:var(--warn);border-color:rgba(245,158,11,.25)':''}">
+        ${d.type.replace(/_/g,' ')}
+      </span></td>
+      <td>${d.course_id || '—'}</td>
+      <td style="font-size:13px">${summary}</td>
+      <td style="font-size:12px;color:var(--muted)">${fmtTime(b.timestamp)}</td>
+      <td><code>${shortHash(b.hash)}</code></td>
+    </tr>`;
+  }).join('');
+}
+
+function refreshAll() {
+  renderDashboard();
+  renderMyAttendance();
+  renderBlockchain();
+  document.getElementById('chain-length').textContent = `${MOCK_CHAIN.length} blocks`;
+}
+
+// ── Navigation ──────────────────────────────────────────────────────────────
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', e => {
+    e.preventDefault();
+    const pageId = item.dataset.page;
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    item.classList.add('active');
+    document.getElementById(`page-${pageId}`).classList.add('active');
+  });
+});
+
+// Filter input live update
+document.getElementById('filter-course').addEventListener('input', renderMyAttendance);
+
+// QR box paste shortcut
+document.getElementById('qr-box').addEventListener('click', async () => {
+  try {
+    const text = await navigator.clipboard.readText();
+    document.getElementById('attendance-url').value = text;
+    toast('URL pasted from clipboard.', 'info');
+  } catch {
+    toast('Paste the URL manually in the field below.', 'info');
+  }
+});
+
+// ── Initialise ──────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Header
+  document.getElementById('hdr-avatar').textContent = STUDENT.avatar;
+  document.getElementById('hdr-name').textContent   = STUDENT.name;
+  document.getElementById('hdr-reg').textContent    = STUDENT.reg_no;
+  document.getElementById('greeting-name').textContent = STUDENT.name.split(' ')[0];
+  // Pre-fill reg no in sign-in form
+  document.getElementById('field-reg-no').value = STUDENT.reg_no;
+
+  refreshAll();
+});
+</script>
+</body>
+</html>
