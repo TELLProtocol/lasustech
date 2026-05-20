@@ -6,7 +6,14 @@ import json
 from urllib.parse import urlparse, parse_qs
 import time
 
-app = Flask(__name__)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PUBLIC_DIR = os.path.join(BASE_DIR, '../public')
+
+app = Flask(
+    __name__,
+    static_folder=PUBLIC_DIR,
+    static_url_path=''
+)
 CORS(app)
 
 # Initialize blockchain
@@ -15,6 +22,18 @@ ledger = AttendanceBlockchain()
 # ──────────────────────────────────────────────────────────────────────────────
 # Existing endpoints (from previous refactoring)
 # ──────────────────────────────────────────────────────────────────────────────
+
+@app.route('/')
+def home():
+    return app.send_static_file('index.html')
+
+@app.route('/lecturer')
+def lecturer():
+    return app.send_static_file('lecturer-dashboard.html')
+
+@app.route('/student')
+def lecturer():
+    return app.send_static_file('student-dashboard.html')
 
 @app.route('/api/chain', methods=['GET'])
 def get_chain():
