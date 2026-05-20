@@ -6,10 +6,15 @@ WORKDIR /app
 
 COPY requirements.txt .
 
+RUN apt-get update && apt-get install -y \
+    gcc \
+    zlib1g-dev \
+    libjpeg-dev
+
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
 ENV PORT=8080
 
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 config.app:app
+CMD ["gunicorn", "--bind", "0.0.0.0:8080", "config.app:app"]
