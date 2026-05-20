@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
-from attendBlockchain import AttendanceBlockchain
+from config.attendBlockchain import AttendanceBlockchain
 import json
 from urllib.parse import urlparse, parse_qs
 import time
