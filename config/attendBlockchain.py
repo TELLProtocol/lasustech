@@ -7,7 +7,7 @@ from urllib.parse import urlparse, parse_qs
 # ── Configuration ─────────────────────────────────────────────────────────────
 QR_VALIDITY_WINDOW = 15 * 60      # QR expires after 30 minutes
 STORAGE_BACKEND    = "json"       # "json" or "mysql"
-LEDGER_FILE        = "ledger.json"
+LEDGER_FILE        = "/tmp/ledger.json"
 
 MYSQL_CONFIG = {
     "host":     "localhost",
