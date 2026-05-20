@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>E-Attendance System</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .container {
+      background: #111827;
+      padding: 25px;
+      border-radius: 12px;
+      width: 350px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.4);
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 6px;
+      border: none;
+      outline: none;
+    }
+
+    input, select {
+      background: #1f2937;
+      color: white;
+    }
+
+    button {
+      background: #3b82f6;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #2563eb;
+    }
+
+    .small {
+      font-size: 12px;
+      text-align: center;
+      margin-top: 10px;
+      opacity: 0.7;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    #status {
+      margin-top: 10px;
+      font-size: 13px;
+      text-align: center;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+  <h2>E-Attendance</h2>
+
+  <!-- Role Selection -->
+  <select id="role">
+    <option value="student">Student</option>
+    <option value="lecturer">Lecturer</option>
+  </select>
+
+  <!-- Matric / ID -->
+  <input type="text" id="matric" placeholder="Enter Matric Number / Staff ID"/>
+
+  <!-- Course Code (optional for lecturers) -->
+  <input type="text" id="course" placeholder="Course Code (e.g. CSC101)"/>
+
+  <!-- QR / Session Token -->
+  <input type="text" id="qrToken" placeholder="QR Token (if applicable)"/>
+
+  <button onclick="submitAttendance()">Submit Attendance</button>
+
+  <div id="status"></div>
+
+  <div class="small">
+    Powered by Blockchain Attendance System
+  </div>
+</div>
+
+<script>
+  const API_BASE = "/api"; // connect this to Flask routes
+
+  async function submitAttendance() {
+    const role = document.getElementById("role").value;
+    const matric = document.getElementById("matric").value.trim();
+    const course = document.getElementById("course").value.trim();
+    const qrToken = document.getElementById("qrToken").value.trim();
+    const status = document.getElementById("status");
+
+    if (!matric) {
+      status.innerHTML = "❌ Please enter your Matric/ID";
+      return;
+    }
+
+    status.innerHTML = "⏳ Submitting...";
+
+    try {
+      const response = await fetch(`${API_BASE}/attendance`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          role,
+          matric,
+          course,
+          qrToken
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        status.innerHTML = "✅ Attendance recorded successfully";
+      } else {
+        status.innerHTML = "❌ " + (data.message || "Failed");
+      }
+
+    } catch (err) {
+      status.innerHTML = "❌ Server error. Try again.";
+      console.error(err);
+    }
+  }
+</script>
+
+</body>
+</html>
