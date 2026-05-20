@@ -32,7 +32,7 @@ def lecturer():
     return app.send_static_file('lecturer-dashboard.html')
 
 @app.route('/student')
-def lecturer():
+def student():
     return app.send_static_file('student-dashboard.html')
 
 @app.route('/api/chain', methods=['GET'])
