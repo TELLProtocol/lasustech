@@ -5,8 +5,8 @@ from time import time
 from urllib.parse import urlparse, parse_qs
 
 # ── Configuration ─────────────────────────────────────────────────────────────
-QR_VALIDITY_WINDOW = 30 * 60      # QR expires after 30 minutes
-STORAGE_BACKEND    = "mysql"       # "json" or "mysql"
+QR_VALIDITY_WINDOW = 15 * 60      # QR expires after 30 minutes
+STORAGE_BACKEND    = "json"       # "json" or "mysql"
 LEDGER_FILE        = "ledger.json"
 
 MYSQL_CONFIG = {
