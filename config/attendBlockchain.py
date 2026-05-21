@@ -6,14 +6,15 @@ from urllib.parse import urlparse, parse_qs
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 QR_VALIDITY_WINDOW = 15 * 60      # QR expires after 30 minutes
-STORAGE_BACKEND    = "json"       # "json" or "mysql"
+STORAGE_BACKEND    = "mysql"       # "json" or "mysql"
 LEDGER_FILE        = "/tmp/ledger.json"
 
 MYSQL_CONFIG = {
-    "host":     "localhost",
-    "user":     "root",
-    "password": "your_password",
-    "database": "eattendance",
+    "host":     os.environ.get("DB_HOST", "4kdqoi.h.filess.io"),
+    "port":     int(os.environ.get("DB_PORT", "61002")),
+    "user":     os.environ.get("DB_USER", "lasustech_lastbeltbe"),
+    "password": os.environ.get("DB_PASSWORD", "lasustech"),
+    "database": os.environ.get("DB_NAME", "lasustech_lastbeltbe"),
 }
 
 
