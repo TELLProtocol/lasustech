@@ -95,7 +95,8 @@ class MySQLStorage:
             raise ImportError("Run: pip install mysql-connector-python")
 
     def _connect(self):
-        return self._connector.connect(**self.config)
+        cfg = dict(self.config)
+        return self._pymysql.connect(**cfg, cursorclass=self._DictCursor)
 
     def load(self) -> list:
         conn   = self._connect()
