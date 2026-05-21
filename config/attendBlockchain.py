@@ -84,26 +84,35 @@ class MySQLStorage:
             hash          VARCHAR(64) NOT NULL
         );
 
-    Install: pip install mysql-connector-python
+    Install: pip install PyMySQL cryptography
     """
     def __init__(self, config=None):
         self.config = config or MYSQL_CONFIG
         try:
-            import mysql.connector
-            self._connector = mysql.connector
+            import pymysql
+            import pymysql.cursors
+            self._pymysql    = pymysql
+            self._DictCursor = pymysql.cursors.DictCursor
         except ImportError:
-            raise ImportError("Run: pip install mysql-connector-python")
+            raise ImportError("Run: pip install PyMySQL cryptography")
 
     def _connect(self):
-        cfg = dict(self.config)
-        return self._pymysql.connect(**cfg, cursorclass=self._DictCursor)
+        return self._pymysql.connect(
+            host=self.config["host"],
+            port=self.config["port"],
+            user=self.config["user"],
+            password=self.config["password"],
+            database=self.config["database"],
+            cursorclass=self._DictCursor
+        )
 
     def load(self) -> list:
         conn   = self._connect()
-        cursor = conn.cursor(dictionary=True)
+        cursor = conn.cursor()
         cursor.execute("SELECT * FROM blockchain ORDER BY idx ASC")
         rows   = cursor.fetchall()
-        cursor.close(); conn.close()
+        cursor.close()
+        conn.close()
         blocks = []
         for row in rows:
             d = {
@@ -129,7 +138,8 @@ class MySQLStorage:
         for b in chain:
             cursor.execute(sql, (b.index, b.timestamp, json.dumps(b.data), b.previous_hash, b.hash))
         conn.commit()
-        cursor.close(); conn.close()
+        cursor.close()
+        conn.close()
 
 
 def get_storage():
