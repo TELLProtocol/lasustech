@@ -1,19 +1,23 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
 import os
+from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
 from config.attendBlockchain import AttendanceBlockchain
 import json
 from urllib.parse import urlparse, parse_qs
 import time
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PUBLIC_DIR = os.path.join(BASE_DIR, '../public')
+# Point Flask at my public folder for static files
+app = Flask(__name__, static_folder='../public', static_url_path='')
+CORS(app)
 
-app = Flask(
-    __name__,
-    static_folder=PUBLIC_DIR,
-    static_url_path=''
-)
+# Serve index.html (and other HTML pages) from /public
+@app.route('/')
+@app.route('/<path:path>')
+def serve_static(path='index.html'):
+    public_dir = os.path.join(app.root_path, '..', 'public')
+    if path != '' and os.path.exists(os.path.join(public_dir, path)):
+        return send_from_directory(public_dir, path)
+    return send_from_directory(public_dir, 'index.html')
 CORS(app)
 
 # Initialize blockchain
