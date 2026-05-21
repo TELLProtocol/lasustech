@@ -5,16 +5,11 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 COPY requirements.txt .
-
-RUN apt-get update && apt-get install -y \
-    gcc \
-    zlib1g-dev \
-    libjpeg-dev
-
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
 ENV PORT=8080
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "config.app:app"]
+# Tell gunicorn where app.py actually lives
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 config.app:app
