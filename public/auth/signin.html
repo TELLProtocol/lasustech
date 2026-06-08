@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+  
+    <!-- SEO Tags -->
+	<meta charset="utf-8" />
+	
+	<!-- Browser Compatibility Tags -->
+	<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+	
+	<!--  Tags -->
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	
+	<!-- Responsive Tags -->
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+	
+	<!-- Title Tag -->
+	<title>Lecturers SignIn Page | FUTO</title>
+	
+	<!-- Phosphor Icons CSS File -->
+	<link href="../dist/phosphor-icons/duotone/style.css" rel="stylesheet">
+	<link href="../dist/phosphor-icons/bold/style.css" rel="stylesheet">
+	
+	<!-- Peload Fonts File -->
+	<link rel="preload" href="../dist/css/fonts/trebuc.woff2" as="font" type="font/woff2" crossorigin>
+	<link rel="preload" href="../sidt/css/fonts/trebuc.woff" as="font" type="font/woff" crossorigin>
+	<link rel="preload" href="../dist/css/fonts/Alef-Regular.woff2" as="font" type="font/woff2" crossorigin>
+	<link rel="preload" href="../dist/css/fonts/Alef-Regular.woff" as="font" type="font/woff" crossorigin>
+	
+	<!-- External Font CSS  -->
+	<link href="../dist/css/fonts.css" rel="stylesheet">
+	
+	<!-- External Stylesheet File -->
+	<link href="../dist/css/students.css" rel="stylesheet">
+	<link href="../dist/css/preloader.css" rel="stylesheet">
+	
+	<!-- Site favicon Tag -->
+	<link rel="icon" type="image/x-icon" href="/favicon.ico" />
+	
+	<!-- My Manifest Tag (JSON format) -->
+	<link rel="manifest" href="./manifest.json" />
+  </head>
+  <body>
+    <!-- Preloading dialog -->
+	
+	
+    <!-- Passkey Authentication dialog -->
+	<dialog class="" id="" name=""></dialog>
+	
+	<section class="root" id="root" title="Attendance Form">
+	  <!-- Default view: Sign In -->
+	  <div class="auth-card" id="">
+	    <div class="logo-panel">
+		  <div class="logo-panel-heading" id="" title="School Logo">
+		    <picture>
+			  <!-- Dark mode version (shown when student prefers dark) -->
+			  <source srcset="lasustech-png.png" media="(prefers-color-scheme: dark)">
+			  
+			  <!-- Light mode version (shown when student prefers light) -->
+			  <img src="lasustech-png.png" alt="School Logo">
+			</picture>
+		  </div>
+		</div><br />
+		
+		<!-- Form Element -->
+		<form id="signin">
+		  
+		  <!-- LECTURER EMAIL ADDRESS Element -->
+		  <div class="" title="Input Your Email Address">
+		    <label for="usrmail">Email Address</label>
+			<div class="input-container" id="input-container">
+			  <input type="email" id="usrmail" autofocus name="usrmail" placeholder="Email Address" required value="<?php echo htmlspecialchars($urMail);?>" />
+			  <i class="ph-bold ph-at"></i>
+			</div>
+		    <span class="error" id="usrmailErr"></span><br />
+		  </div>
+		  
+		  <!-- PASSWORD Element -->
+		  <div class="" title="Input Your Password">
+		    <label for="usrpin">Password</label>
+			<div class="input-container" id="input-container">
+			  <input type="password" id="usrpin" autofocus name="pwrd" placeholder="Password" required value="<?php echo htmlspecialchars($upiw);?>" />
+			  <i class="ph-bold ph-eye"></i>
+			</div>
+		    <span class="error" id="usrpinErr"></span><br />
+		  </div>
+		  
+		  
+		  <!-- Messages -->
+		  <div class="messages" id="">
+		    <div class="" id="st-error"></div>
+		  </div><br /><br />
+		  
+		  <!-- Submit Button Element -->
+		  <button type="button" id="submitForm" class="" title="Submit">SIGN IN</button>
+		  
+		</form>
+		
+		<div class="">
+		  <div class="">
+		    <span style="">Don't have an account?  <a href="signup.html">SignUp Here</a></span>
+		  </div>
+		</div>
+		
+	  </div>
+	  
+	</section>
+	
+	<script type="module">
+	  import { FormValidator } from '../dist/js/formValidator.js';
+	  import { setupPasswordToggle } from '../dist/js/formValidator.js';
+	  
+	  const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+	  
+	  new FormValidator({
+		  form: document.getElementById('signin'),
+		  email: document.getElementById('usrmail'),
+		  password: document.getElementById('usrpin'),
+		  submitBtn: document.getElementById('submitForm'),
+		  emailError: document.getElementById('usrmailErr'),
+		  passwordError: document.getElementById('usrpinErr'),
+		  
+		  inputDiv: document.getElementById('tellInputDiv'),
+		  
+		  passwordRegex: strongPasswordRegex
+	  });
+	  
+	  setupPasswordToggle(document.getElementById('usrpin'), document.getElementById('vi1'));
+	  
+	</script>
+  </body>
+</html>
