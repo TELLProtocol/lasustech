@@ -20,6 +20,12 @@ export class FormValidator {
 		this.matricRegex = config.matricRegex || /^(2[2-6])\d{10}$/;
 		this.emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 		
+		this.mode = config.mode || "signin";
+		this.apiEndpoint = config.apiEndpoint;
+		
+		this.role = config.role || null;
+		this.identifier = config.identifier || null;
+		
 		this.init();
 	}
 	
@@ -205,7 +211,9 @@ export class FormValidator {
 		}
 	}
 	
-	handleSubmit(e) {
+	async handleSubmit(e) {
+		e.preventDefault();
+		
 		if (this.matric && !this.matricRegex.test(this.matric.value.trim())) {
 			e.preventDefault();
 			this.validateMatric();
@@ -233,9 +241,48 @@ export class FormValidator {
 			this.confirmPassword.focus();
 			return;
 		}
+
+		try {
+			let payload;
+			
+			if (this.mode === "signup") {
+				payload = {
+					email: this.email.value.trim(),
+					password: this.password.value,
+					role: this.role,
+					identifier: this.identifier
+				};
+			} else {
+				payload = {
+					email: this.email.value.trim(),
+					password: this.password.value
+				}
+			}
+			
+			const response = await fetch(this.apiEndpoint, {
+				method: "POST",
+				credentials: "include",
+				headers: {
+					"Content-Type": "application/json"
+				},
+				body: JSON.stringify(payload)
+			});
+			
+			const data = await response.json();
+			
+			if (!response.ok) {
+				alert(data.error);
+				return;
+			}
+			
+			alert(data.message || "Signup successful!");
+			
+		} catch (err) {
+			console.error(err);
+			alert("Network error");
+		}
 		
-		alert('Form submitted successfully!');
-		this.form.submit();
+		
 	}
 	
 	// Updating UI feedback
