@@ -33,7 +33,9 @@
 	<!-- External Stylesheet File -->
 	<link href="../dist/css/students.css" rel="stylesheet">
 	<link href="../dist/css/preloader.css" rel="stylesheet">
+
 	
+	  
 	<!-- Site favicon Tag -->
 	<link rel="icon" type="image/x-icon" href="/favicon.ico" />
 	
@@ -41,11 +43,6 @@
 	<link rel="manifest" href="./manifest.json" />
   </head>
   <body>
-    <!-- Preloading dialog -->
-	
-	
-    <!-- Passkey Authentication dialog -->
-	<dialog class="" id="" name=""></dialog>
 	
 	<section class="root" id="root" title="Attendance Form">
 	  <!-- Default view: Sign In -->
@@ -69,7 +66,7 @@
 		  <div class="" title="Input Your Email Address">
 		    <label for="usrmail">Email Address</label>
 			<div class="input-container" id="input-container">
-			  <input type="email" id="usrmail" autofocus name="usrmail" placeholder="Email Address" required value="<?php echo htmlspecialchars($urMail);?>" />
+			  <input type="email" id="usrmail" autofocus name="usrmail" placeholder="Email Address" required value="" />
 			  <i class="ph-bold ph-at"></i>
 			</div>
 		    <span class="error" id="usrmailErr"></span><br />
@@ -79,11 +76,12 @@
 		  <div class="" title="Input Your Password">
 		    <label for="usrpin">Password</label>
 			<div class="input-container" id="input-container">
-			  <input type="password" id="usrpin" autofocus name="pwrd" placeholder="Password" required value="<?php echo htmlspecialchars($upiw);?>" />
-			  <i class="ph-bold ph-eye"></i>
+			  <input type="password" id="usrpin" name="pwrd" placeholder="Password" required value="" />
+			  <i class="ph-bold ph-eye" id="vi1"></i>
 			</div>
 		    <span class="error" id="usrpinErr"></span><br />
 		  </div>
+		  
 		  
 		  
 		  <!-- Messages -->
@@ -122,7 +120,10 @@
 		  
 		  inputDiv: document.getElementById('tellInputDiv'),
 		  
-		  passwordRegex: strongPasswordRegex
+		  passwordRegex: strongPasswordRegex,
+
+		  mode: "signin",
+		  apiEndpoint: "/api/auth/signin"
 	  });
 	  
 	  setupPasswordToggle(document.getElementById('usrpin'), document.getElementById('vi1'));
