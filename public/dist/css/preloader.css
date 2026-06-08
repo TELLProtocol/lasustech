@@ -1,0 +1,58 @@
+/* =============================
+    PRELOADER CSS
+============================= */
+
+/* Default (Light Mode) */
+@media (prefers-color-scheme: light) {
+	.preloader {
+		background: rgba(255, 255, 255, 0.85) url("./preload.gif") no-repeat center;
+	}
+	
+	
+}
+.preloader {
+    width: 80%;
+    max-width: 80%;
+    height: auto;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-size: contain;
+    border: none;
+    outline: none;
+    box-sizing: border-box;
+    margin: 0 auto;
+    z-index: 9500;
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+    .preloader {
+        background: rgba(0, 0, 0, 0.75) url("./preload.gif") no-repeat center;
+        background-size: contain;
+    }
+}
+
+/* Backdrop styling */
+.preloader::backdrop {
+    background: rgba(255, 255, 255, 0.75);
+    position: fixed;
+    inset: 0;                    /* More modern & cleaner than top/left + transform */
+    z-index: -1;
+}
+
+/* Dark mode backdrop */
+@media (prefers-color-scheme: dark) {
+    .preloader::backdrop {
+        background: rgba(15, 15, 15, 0.85);
+    }
+}
+
+/* Tablet & Desktop Responsive */
+@media (min-width: 1024px) {
+    .preloader {
+        max-width: none;         /* Remove unnecessary max-width on large screens */
+        background-size: contain;    /* Slightly smaller gif on large screens (optional) */
+    }
+}

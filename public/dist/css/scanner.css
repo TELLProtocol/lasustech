@@ -1,0 +1,51 @@
+:root {
+	--ph-blue: #3b82f6;
+	--ph-green: #10b981;
+	--ph-red: #ef4444;
+	--ph-amber: #f59e0b;
+	--ph-surface: #ffffff;
+	-ph-surface-secondary: #f8fafc;
+	--ph-text: #1e293b;
+	--ph-text-muted: #64748b;
+	--ph-border: #e2e8f0;
+	--ph-shadow-lg: 0 25px 60px rgba(0, 0, 0, 0.18), 0 8px 20px rgba(0, 0, 0, 0.1);
+	--ph-shadow-md: 0 10px 30px rgba(0, 0, 0, 0.12), 0 4px 10px rgba(0, 0, 0, 0.06);
+	--ph-radius-xl: 20px;
+	--ph-radius-lg: 14px;
+	--ph-radius-md: 10px;
+	--ph-transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+body {
+	font-family: ;
+	background: linear-gradient(135deg, #e8edf5 0%, #dfe6f0 30%, #eef1f7 60%, #e3e9f3 100%);
+	min-height: 100vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+	-webkit-font-smoothing: antialiased;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,228 @@
+/* =========================
+   THEME VARIABLES
+========================= */
+
+:root {
+	/* Light mode (default) */
+	--bg-body: #f5f5f5;
+	--bg-card: #ffffff;
+	--text-color: #111111;
+	--text-muted: #666666;
+	--input-bg: #ffffff;
+	--input-border: #cccccc;
+	--icon-color: #444444;
+	--shadow: rgba(0, 0, 0, 0.1);
+}
+
+/* Dark mode auto-detection */
+@media (prefers-color-scheme: dark) {
+	:root {
+		--bg-body: #0a0a0a;
+		--bg-card: #121212;
+		--text-color: #e0e0e0;
+		--text-muted: #aaaaaa;
+		--input-bg: #1a1a1a;
+		--input-border: #333333;
+		--icon-color: #bbbbbb;
+		--shadow: rgba(0, 0, 0, 0.4);
+	}
+	img {
+		border: 1px solid #333333;
+		border-radius: 5px;
+		padding: 5px;
+		max-width: 100%;
+		height: auto;
+		display: block;
+		margin: auto;
+		
+	}
+	.logo-panel {
+		border-color: #333333;
+	}
+	
+	.logo-panel-heading {
+		color: #333;
+		background-color: #000000;
+		border-color: #121212;
+	}
+
+	
+}
+
+/* OPTIONAL: Manual toggle support */
+body.dark {
+	--bg-body: #0a0a0a;
+	--bg-card: #121212;
+	--text-color: #e0e0e0;
+	--text-muted: #aaaaaa;
+	--input-bg: #1a1a1a;
+	--input-border: #333333;
+	--icon-color: #bbbbbb;
+	--shadow: rgba(0, 0, 0, 0.4);
+}
+
+/* =========================
+   GLOBAL STYLES
+========================= */
+* {
+	box-sizing: border-box;
+}
+
+body {
+	font-family: "Trebuchet MS", Arial, sans-serif;
+	height: 100vh;
+	margin: 0;
+	padding: 0;
+	background: var(--bg-body);
+	color: var(--text-color);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+/* =========================
+   ROOT CONTAINER
+========================= */
+.root {
+	width: 100%;
+	margin: 0 auto;
+	padding: 2%;
+	background: var(--bg-card);
+	color: var(--text-color);
+	border-radius: 15px;
+	box-shadow: 0 0 15px var(--shadow);
+}
+
+/* Responsive */
+@media (min-width: 1024px) {
+	.root {
+		max-width: 40%;
+		padding: 1%;
+	}
+	/* Icons */
+	.ph-duotone {
+		font-size: 2rem;
+	}
+}
+
+@media (min-width: 1440px) {
+	.root {
+		max-width: 35%;
+		padding: 1.5%;
+	}
+	/* Icons */
+	.ph-duotone {
+		font-size: 2rem;
+	}
+}
+
+/* =========================
+   COMPONENTS
+========================= */
+.auth-card {
+	width: 100%;
+}
+
+/* Input Container */
+.input-container {
+	border: 1px solid var(--input-border);
+	padding: 0 0.5rem;
+	display: flex;
+	align-items: center;
+	background: var(--input-bg);
+	border-top-left-radius: 12px;
+	border-bottom-left-radius: 12px;
+	border-bottom-right-radius: 12px;
+	transition: all 0.3s ease;
+}
+
+.input-container:focus-within {
+	border-color: #888;
+	box-shadow: 0 0 5px var(--shadow);
+}
+
+/* Inputs */
+.input-container input {
+	border: none;
+	outline: none;
+	flex: 1;
+	background: transparent;
+	color: var(--text-color);
+	font: inherit;
+	padding: 0.6rem;
+	font-family: Alef, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+}
+
+/* Input Placeholder */
+input::placeholder {
+	color: var(--text-muted);
+	font-family: Alef;
+}
+
+/* Remove number arrows */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+input[type="number"] {
+	-moz-appearance: textfield;
+}
+
+
+
+
+/* Messages */
+.messages {
+	width: 100%;
+	padding: 2%;
+	color: var(--text-muted);
+	border-left: 3px solid var(--input-border);
+	border-radius: 10px;
+}
+
+/* Icons */
+.ph-duotone {
+	cursor: pointer;
+	color: var(--icon-color);
+	font-size: 1.5rem;
+}
+
+/* Button */
+button {
+	width: 100%;
+	padding: 0.7rem;
+	border: none;
+	border-radius: 10px;
+	background: #4a90e2;
+	color: white;
+	font-weight: bold;
+	cursor: pointer;
+	transition: 0.3s ease;
+}
+
+button:hover {
+	opacity: 0.9;
+}
+@media (prefers-color-scheme: light) {
+	.logo-panel {
+		border-color: #ddd;
+	}
+	.logo-panel-heading {
+		color: #333;
+		background-color: #f5f5f5;
+		border-color: #ddd;
+	}
+	img {
+		border: 1px solid #ddd;
+		border-radius: 5px;
+		padding: 5px;
+		max-width: 100%;
+		height: auto;
+		display: block;
+		margin: auto;
+	}
+	
+	
+
+}
