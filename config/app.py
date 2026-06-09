@@ -298,7 +298,7 @@ def sign_attendance():
     now = time.time()
     
     # Check QR validity window (30 minutes)
-    QR_VALIDITY_WINDOW = 30 * 60
+    QR_VALIDITY_WINDOW = 12 * 60
     if now - validity > QR_VALIDITY_WINDOW:
         return jsonify({'error': f'QR code expired ({QR_VALIDITY_WINDOW // 60} min limit). Ask your lecturer to regenerate.'}), 400
     
