@@ -1185,22 +1185,46 @@ async function createSession() {
 }
  
 function generateQR(url) {
-  const canvas      = document.getElementById('qr-canvas');
+  const container  = document.getElementById('qr-canvas');
   const placeholder = document.getElementById('qr-placeholder');
-  canvas.innerHTML  = '';
   
-  canvas.style.display      = 'block';
-  placeholder.style.display = 'none';
+  container.innerHTML = '';
   
-  canvas.innerHTML = '';
-  new QRCode(canvas, { text: url, width: 180, height: 180, colorDark: '#1c1917', colorLight: '#ffffff' });
- 
-  const urlBox = document.getElementById('qr-url-box');
-  urlBox.textContent    = url;
-  urlBox.style.display  = 'block';
- 
-  document.getElementById('copy-url-btn').disabled = false;
-  document.getElementById('print-qr-btn').disabled = false;
+  // Create a <canvas> element to pass to QRCode.toCanvas
+  const canvas = document.createElement('canvas');
+  
+  container.appendChild(canvas);
+  try {
+	  QRCode.toCanvas(url, {
+		  width: 180,
+		  margin: 2,
+		  color: {
+			  dark: '#1c1917',
+			  light: '#FFFFFF'
+		  }
+	  }, function(err) {
+		  if (err) {
+			  console.error('QRCode Error: ', err.message);
+			  toast('Failed to generate QR code.', 'error');
+			  return;
+		  }
+		  
+		  // Success — reveal QRCode
+		  container.style.display = 'block';
+		  placeholder.style.display = 'none';
+		  
+		  const urlBox = document.getElementById('qr-url-box');
+		  urlBox.textContent   = url;
+		  urlBox.style.display = 'block';
+		  
+		  document.getElementById('copy-url-btn').disabled = false;
+		  document.getElementById('print-qr-btn').disabled = false;
+	  });
+  } catch (error) {
+	  console.error('Error generating QR code:', error);
+	  console.error('Error generating QR code:', error.message);
+	  toast('QR library error: ' + error.message, 'error');
+  }
 }
  
 function startCountdown(validity) {
