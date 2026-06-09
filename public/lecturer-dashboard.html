@@ -1187,7 +1187,13 @@ async function createSession() {
 function generateQR(text) {
   const container  = document.getElementById('qr-canvas');
   const placeholder = document.getElementById('qr-placeholder');
-  
+	
+  const urlBox = document.getElementById('qr-url-box');
+  urlBox.textContent   = url;
+  urlBox.style.display = 'block';
+  document.getElementById('copy-url-btn').disabled = false;
+  document.getElementById('print-qr-btn').disabled = false;
+
   container.innerHTML = '';
   
   // Create a <canvas> element to pass to QRCode.toCanvas
@@ -1213,13 +1219,6 @@ function generateQR(text) {
 		  container.appendChild(canvas);
 		  placeholder.style.display = 'none';
 		  container.style.display = 'block';
-		  
-		  const urlBox = document.getElementById('qr-url-box');
-		  urlBox.textContent   = url;
-		  urlBox.style.display = 'block';
-		  
-		  document.getElementById('copy-url-btn').disabled = false;
-		  document.getElementById('print-qr-btn').disabled = false;
 	  });
   } catch (error) {
 	  console.error('Error generating QR code:', error);
