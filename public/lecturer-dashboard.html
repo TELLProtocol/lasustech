@@ -6,7 +6,7 @@
   <title>LASUSTECH e-Attendance — Lecturer Portal</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="./dist/js/qrcode@1_5_1/qrcode.min.js"></script>
   <script src="./dist/js/zxing@0_19_1/index.min.js"></script>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -909,7 +909,7 @@
 const API_BASE = "https://lasustech-eatt-83584741153.europe-west1.run.app/api";
  
 const QR_BASE_URL        = "https://lasustech-eatt-83584741153.europe-west1.run.app/signed.html";
-const QR_VALIDITY_WINDOW = 10 * 60;   // seconds
+const QR_VALIDITY_WINDOW = 12 * 60;   // seconds
  
 const LECTURER = { name: "Dr. John Doe", tutor_id: "6A0B3354", avatar: "JD" };
  
@@ -1170,6 +1170,7 @@ async function createSession() {
  
     const validity = ts();
     const url = `${QR_BASE_URL}?tutorID=${tutor_id}&course_code=${course_id}&validity=${validity}`;
+	console.log(url);
     activeQR = { url, expiresAt: validity + QR_VALIDITY_WINDOW, sessionId: attendance_id };
  
     generateQR(url);
@@ -1187,9 +1188,12 @@ function generateQR(url) {
   const canvas      = document.getElementById('qr-canvas');
   const placeholder = document.getElementById('qr-placeholder');
   canvas.innerHTML  = '';
-  new QRCode(canvas, { text: url, width: 180, height: 180, colorDark: '#1c1917', colorLight: '#ffffff' });
+  
   canvas.style.display      = 'block';
   placeholder.style.display = 'none';
+  
+  canvas.innerHTML = '';
+  new QRCode(canvas, { text: url, width: 180, height: 180, colorDark: '#1c1917', colorLight: '#ffffff' });
  
   const urlBox = document.getElementById('qr-url-box');
   urlBox.textContent    = url;
