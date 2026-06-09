@@ -1184,7 +1184,7 @@ async function createSession() {
   }
 }
  
-function generateQR(url) {
+function generateQR(text) {
   const container  = document.getElementById('qr-canvas');
   const placeholder = document.getElementById('qr-placeholder');
   
@@ -1194,15 +1194,16 @@ function generateQR(url) {
   const canvas = document.createElement('canvas');
   
   try {
-	  QRCode.toCanvas(url, {
-		  width: 180,
+	  QRCode.toCanvas(text, {
+		  width: 256,
 		  margin: 2,
 		  color: {
 			  dark: '#000000',
 			  light: '#FFFFFF'
 		  }
-	  }, function(err) {
+	  }, function(err, canvas) {
 		  if (err) {
+			  console.error('Error generating QR code:', err);
 			  console.error('QRCode Error: ', err.message);
 			  toast('Failed to generate QR code.', 'error');
 			  return;
@@ -1210,8 +1211,8 @@ function generateQR(url) {
 		  
 		  // Success — reveal QRCode
 		  container.appendChild(canvas);
-		  container.style.display = 'block';
 		  placeholder.style.display = 'none';
+		  container.style.display = 'block';
 		  
 		  const urlBox = document.getElementById('qr-url-box');
 		  urlBox.textContent   = url;
