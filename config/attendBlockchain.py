@@ -7,7 +7,7 @@ from time import time
 from urllib.parse import urlparse, parse_qs
 
 # ── Configuration ─────────────────────────────────────────────────────────────
-QR_VALIDITY_WINDOW = 15 * 60      # QR expires after 30 minutes
+QR_VALIDITY_WINDOW = 12 * 60      # QR expires after 12 minutes
 STORAGE_BACKEND    = "mysql"       # "json" or "mysql"
 LEDGER_FILE        = "/tmp/ledger.json"
 
@@ -26,7 +26,7 @@ MYSQL_CONFIG = {
 class Block:
     def __init__(self, index, data, previous_hash, timestamp=None):
         self.index         = index
-        self.timestamp     = timestamp if timestamp else time()
+        self.timestamp     = timestamp if timestamp is not None else str(time())
         self.data          = data
         self.previous_hash = previous_hash
         self.hash          = self.calculate_hash()
@@ -80,7 +80,7 @@ class MySQLStorage:
 
         CREATE TABLE blockchain (
             idx           INT PRIMARY KEY,
-            timestamp     DOUBLE NOT NULL,
+            timestamp     VARCHAR(40) NOT NULL,
             data          JSON   NOT NULL,
             previous_hash VARCHAR(64) NOT NULL,
             hash          VARCHAR(64) NOT NULL
@@ -138,7 +138,7 @@ class MySQLStorage:
                 previous_hash=VALUES(previous_hash), hash=VALUES(hash)
         """
         for b in chain:
-            cursor.execute(sql, (b.index, b.timestamp, json.dumps(b.data), b.previous_hash, b.hash))
+            cursor.execute(sql, (b.index, str(b.timestamp), json.dumps(b.data), b.previous_hash, b.hash))
         conn.commit()
         cursor.close()
         conn.close()
