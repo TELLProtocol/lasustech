@@ -150,7 +150,7 @@ def signin():
 
 @app.route('/signed')
 def signstudent():
-    retun app.send_static_file('signed.html')
+    return app.send_static_file('signed.html')
 
 @app.route('/api/chain', methods=['GET'])
 def get_chain():
