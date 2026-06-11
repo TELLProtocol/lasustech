@@ -1169,7 +1169,7 @@ async function createSession() {
     if (data.error) { toast(data.error, 'error'); return; }
  
     const validity = ts();
-    const url = `${QR_BASE_URL}?tutorID=${tutor_id}&course_code=${course_id}&attendId=${attendance_id}&validity=${validity}`;
+    const url = `${QR_BASE_URL}?tutorID=${tutor_id}&course_code=${course_id}&attendId=${attendance_id}&nonce=${validity}`;
 	console.log(url);
     activeQR = { url, expiresAt: validity + QR_VALIDITY_WINDOW, sessionId: attendance_id };
  
